@@ -23,6 +23,10 @@ int sensorValue = 0;        // value read from the pot  - From example
 int outputValue = 0;        // value output to the PWM (analog out) - From example
 int analogReadState[analogLayoutLength]; // Stores the read state of the analog pins
 int digitalReadState[digitalLayoutLength]; // Stores the read state of the digital pins
+int Switch_State[] = {HIGH, HIGH, HIGH, HIGH};  // Array for the switching state of eache socket DEFAULT is TRUE
+int Switch_to_pin_array[] = {5, 6, 7, 8};       // Array for mapping states of the switches to the physical pins
+int Switch_State_ControlSignal[4];              // Array for the revieved controlsignals
+
 // Global Variables ------------------------------------------------
 
 
@@ -35,7 +39,15 @@ void setup() {
 
 
 void loop() {
+  // HÄR BEHÖVEER VI LÄSA IN KONTROLLSIGLNALERNA!!!!!!!
   
+  // Check if there are changes between Switch_State[] - Switch_State_ControlSignal[] and IF there are... SWITCH!!!!---
+  for (int x = 0; x < 4; x++){
+    if(Switch_State[x] != Switch_State_ControlSignal[x]){
+      power_switching(x);
+    }
+  }
+  // Check if there are changes between Switch_State[] - Switch_State_ControlSignal[] and IF there are... SWITCH!!!!---
   
   // Read the values from the analog and digital pins---------------
   for (int x = 0; x <= analogLayoutLength-1; x++){    // Read the analog pins and store them in analogReadstate
@@ -46,6 +58,8 @@ void loop() {
     digitalReadState[x] = digitalRead(digitalLayout[x]);
   }
   // Read the values from the analog and digital pins---------------
+  
+  
 
  
   
@@ -71,3 +85,20 @@ void loop() {
   // Analog Values --------------
   // Print the values through the serial port ----------------------
 }
+
+
+
+
+// Function for switching eache socket -----------------------------
+void power_switching(int socket){
+  if (Switch_State[socket] == HIGH){
+   Switch_State[socket] = LOW;
+   digitalWrite(socket, LOW);
+  }
+ if (Switch_State[socket] == LOW){
+  Switch_State[socket] = HIGH;
+  digitalWrite(socket, HIGH);
+ } 
+}
+// Function for switching eache socket -----------------------------
+
