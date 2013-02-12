@@ -38,11 +38,11 @@ void loop() {
   
   
   // Read the values from the analog and digital pins---------------
-  for (int x = 1; x <= analogLayoutLength; x++){    // Read the analog pins and store them in analogReadstate
+  for (int x = 0; x <= analogLayoutLength-1; x++){    // Read the analog pins and store them in analogReadstate
     analogReadState[x] = analogRead(analogLayout[x]);
   }
 
-  for (int x = 1; x <= digitalLayoutLength; x++){  // Read the digital pins and store them in digitalReadstate
+  for (int x = 0; x <= digitalLayoutLength-1; x++){  // Read the digital pins and store them in digitalReadstate
     digitalReadState[x] = digitalRead(digitalLayout[x]);
   }
   // Read the values from the analog and digital pins---------------
