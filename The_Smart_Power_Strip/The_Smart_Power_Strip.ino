@@ -26,7 +26,7 @@ int digitalReadState[digitalLayoutLength]; // Stores the read state of the digit
 int Switch_State[] = {HIGH, HIGH, HIGH, HIGH};  // Array for the switching state of eache socket DEFAULT is TRUE
 int Switch_to_pin_array[] = {5, 6, 7, 8};       // Array for mapping states of the switches to the physical pins
 int Switch_State_ControlSignal[4];              // Array for the revieved controlsignals
-
+String control_message = "id:auth:1;0;1;1";     //The controll message string read from the wifi module
 // Global Variables ------------------------------------------------
 
 
@@ -40,6 +40,14 @@ void setup() {
 
 void loop() {
   // HÄR BEHÖVEER VI LÄSA IN KONTROLLSIGLNALERNA!!!!!!!
+  
+  // Algorithm for decoding the control message string into arrays--
+  int first_semicolon = control_message.indexOf(';');
+  for (int x = 0; x < 4; x++) {
+    Switch_State_ControlSignal[x] = control_message.charAt(first_semicolon - 1 + x*2);
+  }  
+  // Algorithm for decoding the control message string into arrays--
+  
   
   // Check if there are changes between Switch_State[] - Switch_State_ControlSignal[] and IF there are... SWITCH!!!!---
   for (int x = 0; x < 4; x++){
@@ -84,12 +92,17 @@ void loop() {
   Serial.print(analogReadState[5]);
   // Analog Values --------------
   // Print the values through the serial port ----------------------
+
+  // Algorithm for decoding the control message string into arrays--
+  
+  // Algorithm for decoding the control message string into arrays--
+
+
+
+
 }
 
-
-
-
-// Function for switching eache socket -----------------------------
+// Function for switching each socket -----------------------------
 void power_switching(int socket){
   if (Switch_State[socket] == HIGH){
    Switch_State[socket] = LOW;
@@ -100,5 +113,6 @@ void power_switching(int socket){
   digitalWrite(socket, HIGH);
  } 
 }
-// Function for switching eache socket -----------------------------
+// Function for switching each socket -----------------------------
+
 
