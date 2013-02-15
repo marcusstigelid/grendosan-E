@@ -29,18 +29,8 @@ const int digitalLayout[] = {
 
 
 // Global Variables -----------------------------------------------
-<<<<<<< HEAD
 const int analogLayoutLength = 6; // The length of the analogLayout vector.
 const int digitalLayoutLength = 12; // The length of the digitalLayout vector.
-int sensorValue = 0;        // value read from the pot  - From example
-int outputValue = 0;        // value output to the PWM (analog out) - From example
-int analogReadState[analogLayoutLength]; // Stores the read state of the analog pins
-int digitalReadState[digitalLayoutLength]; // Stores the read state of the digital pins
-=======
-const int analogLayoutLength = 5; // The length of the analogLayout vector.
-const int digitalLayoutLength = 12; // The length of the digitalLayout vector.
-int sensorValue = 0;        // value read from the pot  - From example
-int outputValue = 0;        // value output to the PWM (analog out) - From example
 const int sampleNumber = 500;     // Number of sampels to make for each measurement
 int analogReadState[analogLayoutLength][sampleNumber]; // Stores the sampled vectors of the analog pins 
 int digitalReadState[digitalLayoutLength]; // Stores the read state of the digital pins
@@ -53,7 +43,9 @@ String control_message = "id:auth:1;0;1;1";     //The controll message string re
 String ID = "testID";
 int counter = 0;
 boolean bufferIsEmpty = true;
->>>>>>> origin/master
+int RMS[sampleNumber-1];
+int activePower[sampleNumber-1];
+int phaseDiff[sampleNumber-1];
 // Global Variables ------------------------------------------------
 
 
@@ -88,55 +80,6 @@ void setup() {
 
 // MAIN LOOP ---------------------------------------------------------------------------------------------------------
 void loop() {
-<<<<<<< HEAD
-  
-  
-  // Read the values from the analog and digital pins---------------
-  for (int x = 1; x <= analogLayoutLength; x++){    // Read the analog pins and store them in analogReadstate
-    analogReadState[x] = analogRead(analogLayout[x]);
-  }
-
-  for (int x = 1; x <= digitalLayoutLength; x++){  // Read the digital pins and store them in digitalReadstate
-    digitalReadState[x] = digitalRead(digitalLayout[x]);
-  }
-  // Read the values from the analog and digital pins---------------
-
- 
-  
-  // Print the values through the serial port ----------------------
-  // Analog Values --------------
-  Serial.println("Value on A0: "); 
-  Serial.print(analogReadState[0]);
-  
-  Serial.println("Value on A1: "); 
-  Serial.print(analogReadState[1]);
-  
-  Serial.println("Value on A2: "); 
-  Serial.print(analogReadState[2]);
-  
-  Serial.println("Value on A3: "); 
-  Serial.print(analogReadState[3]);
-  
-  Serial.println("Value on A4: "); 
-  Serial.print(analogReadState[4]);
-  
-  Serial.println("Value on A5: "); 
-  Serial.print(analogReadState[5]);
-  // Analog Values --------------
-  // Print the values through the serial port ----------------------
-}
-
-float powerCalc (int current[], int voltage[]) {
-  
- float power = 10;
- int n= 10;
- for (int i=0; i <= n-1; i++){
-   
- }
- return power;
-  
- }
-=======
 
   if (WiFi_read()){ //Check for input from server and read
     parse(); //Parse input
@@ -173,6 +116,24 @@ float powerCalc (int current[], int voltage[]) {
 
 //METHODS -------------------------------------------------------------------------------------------------------------
 
+void powerCalc () {
+
+  int squaredSum[sampleNumber]={0,0,0,0,0};
+  int RMS[sampleNumber-1]={0,0,0,0};
+  int activePower[sampleNumber-1]={0,0,0,0};
+  for (int i=0; i<=analogLayoutLength-1;i++){
+    for(int j=0; j<=sampleNumber-1; j++){
+      squaredSum[i]=squaredSum[i] + pow(analogReadState[i][j],2);
+    }
+    RMS[i]=sqrt(squaredSum[i]/sampleNumber);
+  }
+  //phaseDifference();
+  
+  for (int i=1; i<=analogLayoutLength-1;i++){
+    activePower[i-1]=RMS[0]*RMS[i]*cos(phaseDiff[i-1]);
+  }
+}
+
 // Algorithm for parsing the control message string into arrays--
 void parse (){
   int first_semicolon = control_message.indexOf(';');
@@ -200,7 +161,7 @@ void sample () {
     for (int x = 0; x <= analogLayoutLength-1; x++){    // Read the analog pins and store them in analogReadstate
       analogReadState[x][i] = analogRead(analogLayout[x]);
     }
-    delay(0.001);
+    delay(1);
   }
 }
 //Samples the analog inputs <sampleNumber> times -----------------
@@ -302,7 +263,7 @@ boolean WiFi_read() {
 // Try to send data to server -------------------------------------
 boolean send_update () {
 
-  String sendStream = String(ID + ":" + "100" + ";" + "100" + ";" + "100" + ";" + "100" + ":" + Switch_State[0] + ";" + Switch_State[1] + ";" + Switch_State[2] + ";" + Switch_State[3]); // ID:10;11;12;13:1;0;0;0
+  String sendStream = String(ID + ":" + activePower[0] + ";" + activePower[1] + ";" + activePower[2] + ";" + activePower[3] + ":" + Switch_State[0] + ";" + Switch_State[1] + ";" + Switch_State[2] + ";" + Switch_State[3]); // ID:10;11;12;13:1;0;0;0
 
   if (client.connected()) {
     Serial.println("connected");
@@ -314,10 +275,3 @@ boolean send_update () {
   }  
 }
 // Try to send data to server -------------------------------------
-
-
-
-
-
-
->>>>>>> origin/master
