@@ -81,4 +81,4 @@ float powerCalc (int current[], int voltage[]) {
  }
  return power;
   
-}
+ }
