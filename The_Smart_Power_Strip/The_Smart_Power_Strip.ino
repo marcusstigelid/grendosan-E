@@ -1,5 +1,5 @@
 
-
+  
 /*
  The smart power strip,
  
@@ -18,6 +18,8 @@
 #include <WiFlyClient.h>
 //#include <WiFlyDevice.h>
 //#include <WiFlyServer.h>
+#include <Credentials.h>
+#include <SoftwareSerial.h>
 
 
 // Arrays used for reading the pins -------------------------------
@@ -33,7 +35,7 @@ const int analogLayoutLength = 5; // The length of the analogLayout vector.
 const int digitalLayoutLength = 12; // The length of the digitalLayout vector.
 int sensorValue = 0;        // value read from the pot  - From example
 int outputValue = 0;        // value output to the PWM (analog out) - From example
-const int sampleNumber = 500;     // Number of sampels to make for each measurement
+const int sampleNumber = 100;     // Number of sampels to make for each measurement
 int analogReadState[analogLayoutLength][sampleNumber]; // Stores the sampled vectors of the analog pins 
 int digitalReadState[digitalLayoutLength]; // Stores the read state of the digital pins
 int Switch_State[] = {
@@ -49,15 +51,17 @@ boolean bufferIsEmpty = true;
 
 
 // Will be loaded from EEPROM
-char passphrase[] = "pass";
-char ssid[] = "ssid";
+char passphrase[] = "hunden123";
+char ssid[] = "wifi";
 
+//Ports for WiFly UART communication
+SoftwareSerial SerialRNXV(3, 2);
 
 // TEMP
 byte server[] = {
-  66, 249, 89, 104}; // Google
+  10, 0, 1, 3}; // Google
 
-WiFlyClient client(server, 80);
+WiFlyClient client(server, 52492);
 //TEMP
 
 
@@ -67,22 +71,25 @@ WiFlyClient client(server, 80);
 void setup() {
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
+  SerialRNXV.begin(9600);
+  
+  //Set up UART communication
+  WiFly.setUart(&SerialRNXV);
 
   //Delay for booting WiFly module
   delay(100);
+
   //Initialize WiFi connection to server
   WiFi_init (); 
-
 }
 // Used to set up communication ------------------------------------
 
 
 // MAIN LOOP ---------------------------------------------------------------------------------------------------------
 void loop() {
-
   if (WiFi_read()){ //Check for input from server and read
-    parse(); //Parse input
-    check_state(); //Check if states have changed
+    //parse(); //Parse input
+    //check_state(); //Check if states have changed
   }
 
   counter++;
@@ -142,7 +149,7 @@ void sample () {
     for (int x = 0; x <= analogLayoutLength-1; x++){    // Read the analog pins and store them in analogReadstate
       analogReadState[x][i] = analogRead(analogLayout[x]);
     }
-    delay(0.001);
+    delay(1);
   }
 }
 //Samples the analog inputs <sampleNumber> times -----------------
@@ -212,9 +219,9 @@ void WiFi_init () {
 
   if (!WiFly.join(ssid, passphrase)) {
     Serial.println("Association failed.");
-    //    while (1) {
-    //      // Hang on failure.
-    //    }
+        while (1) {
+          // Hang on failure.
+        }
   }
   Serial.println("connecting...");
 }
@@ -223,9 +230,13 @@ void WiFi_init () {
 // Try to read input from server ----------------------------------
 boolean WiFi_read() {
   if (client.connected()) { //Check if client is connected
-    if (client.available()){ //Check if client has received data
-      control_message = String (control_message + client.read());
+    if (client.available()){
+    while (client.available()){ //Check if client has received data
+      char temp = client.read();
+      //control_message = String (control_message + client.read());
+      Serial.print(temp);
       return true;
+    }
     }
     else return false;
   }
@@ -248,7 +259,8 @@ boolean send_update () {
 
   if (client.connected()) {
     Serial.println("connected");
-    client.println(sendStream);
+    //client.println("GET HTTP/1.0");//sendStream);
+    client.write("Please just work");
     return true;
   } 
   else if (!client.connected()) {
