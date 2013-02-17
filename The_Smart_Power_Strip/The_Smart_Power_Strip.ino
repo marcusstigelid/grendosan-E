@@ -1,17 +1,17 @@
 /*
      The smart power strip,
-     
-     Written by Philip Karlsson and David Johansson
-     
-     2013-02-13
-     
+ 
+ Written by Philip Karlsson and David Johansson
+ 
+ 2013-02-13
+ 
  */
 
 #include <SPI.h>
 #include <Arduino.h>
 #include <Streaming.h>
 #include <SoftwareSerial.h>
-#include "WiFlySerial.h"
+#include <WiFlySerial.h>
 //#include "MemoryFree.h"
 //#include "Credentials.h"
 // Arrays used for reading the pins -------------------------------
@@ -53,7 +53,7 @@ boolean bufferIsEmpty = true;
 
 char passphrase[] = "hunden123";
 char ssid[] = "wifi";
-
+const char* chan = "6"; // Channel for adhoc
 
 // Pins are 3 for INCOMING TO Arduino, 5 for OUTGOING TO Wifly
 // Arduino       WiFly
@@ -61,7 +61,7 @@ char ssid[] = "wifi";
 //  3 - send     RX   (Send from Arduino, Receive to WiFly) 
 
 
-WiFlySerial WiFly(2,3);
+WiFlySerial WiFly(3,2);
 // TEMP
 //byte server[] = {10, 0, 1, 3};
 //WiFlyClient client(server, 52492);
@@ -84,8 +84,19 @@ void setup()
   Serial.begin(9600);
   //Delay for booting WiFly module
   delay(1000);
+
+  Serial.println(F("Starting WiFly"));
+  WiFly.begin();
+  Serial.println("finished beginning");
+
+
+  //Set up adhoc
+  setup_adhoc();
+
   //Initialize WiFi connection to server
   wifi_init();
+
+
 }
 
 // MAIN LOOP ---------------------------------------------------------------------------------------------------------
@@ -142,7 +153,7 @@ void loop()
 void parse() 
 {
   int first_semicolon = control_message.indexOf(';');
-for(int x = 0; x < 4; x++)
+  for(int x = 0; x < 4; x++)
   {
     Switch_State_ControlSignal[x] = control_message.charAt(first_semicolon - 1 + x*2);
   }
@@ -152,7 +163,7 @@ for(int x = 0; x < 4; x++)
 // Check if there are changes between Switch_State[] - Switch_State_ControlSignal[] and IF there are... SWITCH!!!!---
 void check_state() 
 {
-for(int x = 0; x < 4; x++)
+  for(int x = 0; x < 4; x++)
   {
     if(Switch_State[x] != Switch_State_ControlSignal[x]) 
     {
@@ -166,9 +177,9 @@ for(int x = 0; x < 4; x++)
 //Samples the analog inputs <sampleNumber> times -----------------
 void sample() 
 {
-      for(int i = 0; i <= sampleNumber-1 ; i++)
+  for(int i = 0; i <= sampleNumber-1 ; i++)
   {
-      for(int x = 0; x <= analogLayoutLength-1; x++)
+    for(int x = 0; x <= analogLayoutLength-1; x++)
     { // Read the analog pins and store them in analogReadstate
       analogReadState[x][i] = analogRead(analogLayout[x]);
     }
@@ -234,45 +245,72 @@ void power_switching(int socket)
 // Initialize WiFi module and join network-------------------------
 boolean wifi_init() 
 {
-  Serial.println(F("Starting WiFly"));
-  WiFly.begin();
-  Serial.println("finished beginning");
-  Serial.println("Setting up stuff...");
+
+
+  Serial << "Trying to scan..." << endl;
+  char* pNetScan;
+  const int buflen = 200;
+  char* scan = WiFly.showNetworkScan(pNetScan,buflen);
+  Serial << scan << endl;
+
+  // TEST THIS!
+
   WiFly.setAuthMode( WIFLY_AUTH_WPA2_PSK);
   WiFly.setJoinMode( WIFLY_JOIN_AUTO );
   WiFly.setDHCPMode( WIFLY_DHCP_ON );
-  WiFly.getDeviceStatus();
-  if(! WiFly.isifUp() ) 
-  {
-    Serial << "Leave:"<< ssid << WiFly.leave() << endl;
-    // join
-    if(WiFly.setSSID(ssid)) 
-    {
-      Serial << "SSID Set :"<< ssid << endl;
-    }
+  // First we set the SSID (putting the SSID on the join command doesn't work
+  char prompt[80];
+  Serial.println("Setting SSID using Ron method");
+  WiFly.SendCommandSimple("set wlan ssid ",prompt);
+  WiFly.SendCommandSimple(ssid,prompt);
+  Serial.println("Setting Passphrase using Ron method");
+  WiFly.SendCommandSimple("set wlan phrase ",prompt);
+  WiFly.SendCommandSimple(passphrase,prompt);  
+  if (WiFly.SendCommandSimple("join", prompt)) {
+    // TODO: Extract information from complete response?
+    // TODO: Change this to still work when server mode not active
 
-    if(WiFly.setPassphrase(passphrase)) 
-    {
-      Serial << "Passphrase Set :"<< endl;
-    }
+    Serial << "Success?" << endl;
+  }
 
-    Serial << "Joining... :"<< ssid << endl;
-    if( WiFly.join() ) 
+  else{
+    Serial.println("Setting up stuff...");
+    WiFly.setAuthMode( WIFLY_AUTH_WPA2_PSK);
+    WiFly.setJoinMode( WIFLY_JOIN_AUTO );
+    WiFly.setDHCPMode( WIFLY_DHCP_ON );
+    WiFly.getDeviceStatus();
+    if(! WiFly.isifUp() ) 
     {
-      Serial << F("Joined ") << ssid << F(" successfully.") << endl;
-      //WiFly.setNTP( ntp_server ); //NTP server
-    }
-
-    else 
-    {
-      Serial << F("Join to ") << ssid << F(" failed.") << endl << "You got hanged";
-      while(true) 
+      Serial << "Leave:"<< ssid << WiFly.leave() << endl;
+      // join
+      if(WiFly.setSSID(ssid)) 
       {
-        //Hang
+        Serial << "SSID Set :"<< ssid << endl;
+      }
+
+      if(WiFly.setPassphrase(passphrase)) 
+      {
+        Serial << "Passphrase Set :"<< endl;
+      }
+
+      Serial << "Joining... :"<< ssid << endl;
+      if( WiFly.join() ) 
+      {
+        Serial << F("Joined ") << ssid << F(" successfully.") << endl;
+        //WiFly.setNTP( ntp_server ); //NTP server
+      }
+
+      else 
+      {
+        Serial << F("Join to ") << ssid << F(" failed.") << endl << "You got hanged";
+        while(true) 
+        {
+          //Hang
+        }
+
       }
 
     }
-
   }
 
   // Clear out prior requests.
@@ -354,3 +392,49 @@ boolean wifi_send()
   else return false;
 }
 
+// Set up ADHOC network -------------------------------------------
+void setup_adhoc(){
+  Serial << "Setting up ADHOC" << endl;
+  WiFly.setIP("192.168.0.1");
+  WiFly.setNetMask("255.255.255.0");
+  WiFly.setSSID("Powerstrip");
+  WiFly.setPassphrase("passphrase");
+
+  WiFly.setChannel(chan);
+  WiFly.setDHCPMode(WIFLY_DHCP_OFF);
+  WiFly.setAuthMode(WIFLY_AUTH_ADHOC);
+  WiFly.setJoinMode(WIFLY_JOIN_MAKE_ADHOC);
+  if(WiFly.join()){
+    Serial << "ADHOC is live" << endl;
+  }
+  else{
+    Serial << "Setup failed" << endl;
+    while(true){
+    }
+  }
+  listen();
+}
+
+//Listen for incomming connections -------------------------------
+void listen () {
+
+  if(WiFly.serveConnection()){
+    Serial << "Incoming connection!" << endl;
+
+    char* responseBuffer;
+    const int buflength = 200;
+    WiFly.ScanForPattern(responseBuffer,buflength, "HTTP/1.1", 1000);
+    Serial << "HTTP/1.1 message, bytes: " << strlen(responseBuffer) << endl << responseBuffer << endl;
+    
+
+    //const boolean bCollecting,  const unsigned long WaitTime, const boolean bPromptAfterResult);
+    char chMisc;
+    while ((chMisc = WiFly.read()) > -1)
+      Serial << chMisc;
+
+  }
+  else{
+    Serial << "Timed out!" << endl;
+    listen();
+  }
+}
