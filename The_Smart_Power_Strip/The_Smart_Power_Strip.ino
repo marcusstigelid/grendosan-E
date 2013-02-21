@@ -12,11 +12,13 @@
 #include <Streaming.h>
 #include <SoftwareSerial.h>
 #include <WiFlySerial.h>
-//#include "MemoryFree.h"
+#include <PString.h>
+#include <MemoryFree.h>
+#include <Time.h>
+#include <EEPROM.h>
 //#include "Credentials.h"
 // Arrays used for reading the pins -------------------------------
-const int analogLayout[] = 
-{
+const int analogLayout[] = {
   A0, A1, A2, A3, A4, A5 }
 
 ; // Array for the analog pins
@@ -48,12 +50,40 @@ String ID = "testID";
 int counter = 0;
 boolean bufferIsEmpty = true;
 // Global Variables ------------------------------------------------
+
+
 // Will be loaded from EEPROM
-
-
-char passphrase[] = "hunden123";
-char ssid[] = "wifi";
+//char passphrase[] = "hunden123";
+//char ssid[] = "wifi";
 const char* chan = "6"; // Channel for adhoc
+
+//The following is for storing in EEPROM
+// ID of the settings block
+#define CONFIG_VERSION "ls1"
+
+// Tell it where to store your config data in EEPROM
+#define CONFIG_START 32
+
+char ssid[32];
+char passphrase[32];
+int securityType;
+
+struct StoreStruct {
+  // This is for detection if they are our settings
+  char version[4];
+  // The variables of the settings
+  char ssid[32];
+  char passphrase[32];
+  int securityType;
+} storage = {
+  CONFIG_VERSION,
+  // The default values
+  "Philip och Jennifers Wifi",
+  "W-nånting",
+  WIFLY_AUTH_WPA2_PSK
+};
+
+
 
 // Pins are 3 for INCOMING TO Arduino, 5 for OUTGOING TO Wifly
 // Arduino       WiFly
@@ -70,6 +100,44 @@ WiFlySerial WiFly(3,2);
 
 #define SERVER "10.0.1.3"
 
+#define REQUEST_BUFFER_SIZE 80
+#define RESPONSE_BUFFER_SIZE 300 // Will probably have to be much larger
+#define TEMP_BUFFER_SIZE 80
+
+char bufRequest[REQUEST_BUFFER_SIZE];
+char bufTemp[TEMP_BUFFER_SIZE];
+
+//prog_char s_WT_HTML_HEAD_01[] PROGMEM = "HTTP/1.1 200 OK \r ";
+//prog_char s_WT_HTML_HEAD_02[] PROGMEM = "Content-Type: text/html;charset=UTF-8\r ";
+//prog_char s_WT_HTML_HEAD_03[] PROGMEM = " Content-Length: ";
+//prog_char s_WT_HTML_HEAD_04[] PROGMEM = "Connection: close \r\n\r\n ";
+//prog_char s_WT_HTML_HEAD_05[] PROGMEM = "<META HTTP-EQUIV=\"REFRESH\" CONTENT=\"30\">";
+//
+//#define IDX_WT_HTML_HEAD_01      0
+//#define IDX_WT_HTML_HEAD_02      IDX_WT_HTML_HEAD_01 + 1
+//#define IDX_WT_HTML_HEAD_03      IDX_WT_HTML_HEAD_01 + 2
+//#define IDX_WT_HTML_HEAD_04      IDX_WT_HTML_HEAD_01 + 3
+//#define IDX_WT_HTML_HEAD_05      IDX_WT_HTML_HEAD_01 + 4
+//
+//PROGMEM const char *WT_string_table[] =      
+//{   
+//  s_WT_HTML_HEAD_01,
+//  s_WT_HTML_HEAD_02,
+//  s_WT_HTML_HEAD_03,
+//  s_WT_HTML_HEAD_04,
+//  s_WT_HTML_HEAD_05
+//};
+
+// GetBuffer_P
+// Returns pointer to a supplied Buffer, from PROGMEM based on StringIndex provided.
+// based on example from http://arduino.cc/en/Reference/PROGMEM
+// Reduced need with Arduino's 1.0 F().  
+
+//char* GetBuffer_P(const int StringIndex, char* pBuffer, int bufSize) { 
+//  strncpy_P(pBuffer, (char*)pgm_read_word(&(WT_string_table[StringIndex])), bufSize);  
+//  return pBuffer; 
+//}
+
 //Sass!?
 //#define REQUEST_BUFFER_SIZE 120
 //#define HEADER_BUFFER_SIZE 150
@@ -82,12 +150,19 @@ void setup()
 {
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
+
+  Serial << "Available RAM at setup: " << freeMemory() << endl;
+
+  Serial << "Loading configuration from EEPROM..." << endl;
+  loadConfig();
+  Serial << "SSID: " << ssid << endl << "Passphrase: " << passphrase << endl;
+
   //Delay for booting WiFly module
   delay(1000);
 
-  Serial.println(F("Starting WiFly"));
+  Serial.println(("Starting WiFly"));
   WiFly.begin();
-  Serial.println("finished beginning");
+  Serial.println("WiFly started successfully!");
 
 
   //Set up adhoc
@@ -102,6 +177,7 @@ void setup()
 // MAIN LOOP ---------------------------------------------------------------------------------------------------------
 void loop() 
 {
+  Serial << "Available RAM at loop: " << freeMemory() << endl;
   if(wifi_read()) 
   { //Check for input from server and read
     Serial << "Read successfull!"<< endl;
@@ -425,12 +501,22 @@ void listen () {
     const int buflength = 200;
     WiFly.ScanForPattern(responseBuffer,buflength, "HTTP/1.1", 1000);
     Serial << "HTTP/1.1 message, bytes: " << strlen(responseBuffer) << endl << responseBuffer << endl;
-    
 
-    //const boolean bCollecting,  const unsigned long WaitTime, const boolean bPromptAfterResult);
+
+    //TEMP: const boolean bCollecting,  const unsigned long WaitTime, const boolean bPromptAfterResult);
+
+    // read past the browser's header details (the exact behaviour of the module is to be tested!)
     char chMisc;
     while ((chMisc = WiFly.read()) > -1)
       Serial << chMisc;
+
+    char* response = (char*) malloc(RESPONSE_BUFFER_SIZE);
+
+    // Form header and body of response
+    make_response(response,  responseBuffer, REQUEST_BUFFER_SIZE);
+
+    // Send response
+    WiFly << response << "\r\n\r\n" << "\t";
 
   }
   else{
@@ -438,3 +524,79 @@ void listen () {
     listen();
   }
 }
+
+//TEMPORARY 
+int make_response( char* response,  char* pRequest, const int sizeRequest ) {
+
+  PString strResponse( response, RESPONSE_BUFFER_SIZE);
+  const char *OK = PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n");
+  const char *STYLE = PSTR("\r\n<html style='font-family:Verdana,Geneva,Georgia,Chicago,Arial,Sans-serif;color:#002d80'>");
+
+  if ( strstr(pRequest, "GET / HTTP" ) ) {
+    char* pNetScan;
+    const int buflen = 200;
+    char* scan = WiFly.showNetworkScan(pNetScan,buflen);
+    strResponse << OK << STYLE << "Welcome to The Smart Power Strip Setup! <br/><br> Please enter the correspondent number of your Wi-Fi network shown in the list below. Also enter your password. <br/><br/>" << scan <<
+      "<br/><br/>" << "<p>List number:<input style='margin-left:5px' value='' name='nr'/><br/>Password: <input type='password' name='p' style='margin-left:19px'/><br/><br/><br/>" << 
+      "<form method='post'>You can also manually enter your network credentials below.<p>SSID: <input style='margin-left:53px' value='' name='s'/><br/>Password: <input type='password' name='p' style='margin-left:19px'/><br/>" <<
+      "<br/><br/>Clicking <input type='submit' value='Update'/> will update the configuration and restart the board.</p></form></html>";
+
+    Serial << strResponse << endl;
+
+    // need to exit command mode to be able to send data
+    WiFly.exitCommandMode();
+
+  } 
+  else if (strstr(pRequest, "POST / HTTP" )) {
+
+    Serial << pRequest << endl;
+
+    strResponse << OK << STYLE << "Updated (not). The board has been restarted with the new configuration.</html>";
+  }
+  return strResponse.length();
+}
+
+//TEMP
+// MakeResponseHeader
+// Form a HTML header, including length of body.
+//int MakeResponseHeader( char* pHeader, char* pBody ) {
+//
+//  PString strHeader( pHeader, HEADER_BUFFER_SIZE);
+//  // send a standard http response header    
+//
+//  strHeader << GetBuffer_P(IDX_WT_HTML_HEAD_01,bufTemp,TEMP_BUFFER_SIZE)
+//    << GetBuffer_P(IDX_WT_HTML_HEAD_02,bufTemp,TEMP_BUFFER_SIZE)
+//      << GetBuffer_P(IDX_WT_HTML_HEAD_03,bufTemp,TEMP_BUFFER_SIZE) << (int) strlen(pBody) << " \r"
+//        << GetBuffer_P(IDX_WT_HTML_HEAD_04,bufTemp,TEMP_BUFFER_SIZE);
+//
+//  return strHeader.length();
+//}
+
+//Load WiFi configuration from EEPROM ---------------------------------
+void loadConfig() {
+  // To make sure there are settings, and they are YOURS!
+  // If nothing is found it will use the default settings.
+  if (EEPROM.read(CONFIG_START + 0) == CONFIG_VERSION[0] &&
+      EEPROM.read(CONFIG_START + 1) == CONFIG_VERSION[1] &&
+      EEPROM.read(CONFIG_START + 2) == CONFIG_VERSION[2])
+    for (unsigned int t=0; t<sizeof(storage); t++)
+      *((char*)&storage + t) = EEPROM.read(CONFIG_START + t);
+}
+
+//Save WiFi configuration to EEPROM -----------------------------------
+void saveConfig() {
+  for (unsigned int t=0; t<sizeof(storage); t++)
+    EEPROM.write(CONFIG_START + t, *((char*)&storage + t));
+}
+ // Use like this!
+//void loop() {
+  // [...]
+//  int i = storage.c - 'a';
+  // [...]
+
+  // [...]
+//  storage.c = 'a';
+//  if (ok)
+//    saveConfig();
+  // [...]
+//}
