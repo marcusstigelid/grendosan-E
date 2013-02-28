@@ -1,7 +1,5 @@
-
-  
 /*
- The smart power strip,
+     The smart power strip,
  
  Written by Philip Karlsson and David Johansson
  
@@ -10,127 +8,286 @@
  */
 
 #include <SPI.h>
-//#include <Configuration.h>
-//#include <Debug.h>
-//#include <ParsedStream.h>
-//#include <SpiUart.h>
-#include <WiFly.h>
-#include <WiFlyClient.h>
-//#include <WiFlyDevice.h>
-//#include <WiFlyServer.h>
-#include <Credentials.h>
+#include <Arduino.h>
+#include <Streaming.h>
 #include <SoftwareSerial.h>
-
-
+#include <WiFlySerial.h>
+#include <PString.h>
+#include <MemoryFree.h>
+#include <Time.h>
+#include <EEPROM.h>
+//#include "Credentials.h"
 // Arrays used for reading the pins -------------------------------
 const int analogLayout[] = {
-  A0, A1, A2, A3, A4, A5};                // Array for the analog pins
-const int digitalLayout[] = {
-  2,3,4,5,6,7,8,9,10,11,12,13};          //Array for the digital pins. (These will be changed when decided what to use as Rx, Tx etc..)
+  A0, A1, A2, A3, A4, A5 }
+
+; // Array for the analog pins
+const int digitalLayout[] = 
+{
+  2,3,4,5,6,7,8,9,10,11,12,13 }
+
+; //Array for the digital pins. (These will be changed when decided what to use as Rx, Tx etc..)
 // Arrays used for reading the pins -------------------------------
-
-
 // Global Variables -----------------------------------------------
 const int analogLayoutLength = 6; // The length of the analogLayout vector.
 const int digitalLayoutLength = 12; // The length of the digitalLayout vector.
-<<<<<<< HEAD
 const int sampleNumber = 500;     // Number of sampels to make for each measurement
-=======
+
 int sensorValue = 0;        // value read from the pot  - From example
 int outputValue = 0;        // value output to the PWM (analog out) - From example
-const int sampleNumber = 100;     // Number of sampels to make for each measurement
->>>>>>> aef0516e28647f16d679ea75c42c4229035dffa5
+
 int analogReadState[analogLayoutLength][sampleNumber]; // Stores the sampled vectors of the analog pins 
 int digitalReadState[digitalLayoutLength]; // Stores the read state of the digital pins
-int Switch_State[] = {
-  HIGH, HIGH, HIGH, HIGH};  // Array for the switching state of eache socket DEFAULT is TRUE
-int Switch_to_pin_array[] = {
-  5, 6, 7, 8};       // Array for mapping states of the switches to the physical pins
-int Switch_State_ControlSignal[4];              // Array for the revieved controlsignals
-String control_message = "id:auth:1;0;1;1";     //The controll message string read from the wifi module
+int Switch_State[] = 
+{
+  HIGH, HIGH, HIGH, HIGH }; // Array for the switching state of eache socket DEFAULT is TRUE
+
+int Switch_to_pin_array[] = 
+{
+  5, 6, 7, 8 }
+
+; // Array for mapping states of the switches to the physical pins
+int ControlSignal[4] = {1,1,1,1}; // Array for the revieved controlsignals
+//String control_message = "id:auth:1;0;1;1"; //The controll message string read from the wifi module                REMOVE
 String ID = "testID";
-int counter = 0;
+long counter = 0;
 boolean bufferIsEmpty = true;
-<<<<<<< HEAD
 int RMS[sampleNumber-1];
 int activePower[sampleNumber-1];
-int phaseDiff[sampleNumber-1];
-=======
 int phaseDiff[analogLayoutLength];
 int sampleRate; // Samples/sek
->>>>>>> Phase-Differance
+
 // Global Variables ------------------------------------------------
 
 
 // Will be loaded from EEPROM
-char passphrase[] = "hunden123";
-char ssid[] = "wifi";
+char passphrase[] = "jbregell";
+char ssid[] = "Toshimoshi";
+const char* chan = "1"; // Channel for adhoc
 
-//Ports for WiFly UART communication
-SoftwareSerial SerialRNXV(3, 2);
+//The following is for storing in EEPROM
+// ID of the settings block
+#define CONFIG_VERSION "ls1"
 
-// TEMP
-byte server[] = {
-  10, 0, 1, 3}; // Google
+// Tell it where to store your config data in EEPROM
+#define CONFIG_START 32
 
-WiFlyClient client(server, 52492);
-//TEMP
+//char ssid[32];
+//char passphrase[32];
+int securityType;
+
+struct StoreStruct {
+  // This is for detection if they are our settings
+  char version[4];
+  // The variables of the settings
+  char ssid[32];
+  char passphrase[32];
+  int securityType;
+} 
+storage = {
+  CONFIG_VERSION,
+  // The default values
+  "Philip och Jennifers Wifi",
+  "W-nånting",
+  WIFLY_AUTH_WPA2_PSK
+};
 
 
+//Set UART pins
+WiFlySerial WiFly(2,3);
+
+
+//Defines server
+#define SERVER "bregell.dyndns.org" //"46.239.111.148"
+#define PORT 39500
+#define NTP_SERVER "ntp1.sp.se"
+
+//Buffer sizes
+#define REQUEST_BUFFER_SIZE 80
+#define RESPONSE_BUFFER_SIZE 100
+#define TEMP_BUFFER_SIZE 100
+#define INDICATOR_BUFFER_SIZE 16
+#define CMD_BUFFER_SIZE 50
+#define UPDATE_BUFFER_SIZE 27
+
+//Define buffers
+char bufRequest[REQUEST_BUFFER_SIZE];
+char prompt[INDICATOR_BUFFER_SIZE]; 
+char bufTemp[TEMP_BUFFER_SIZE];
+char bufUpdate[UPDATE_BUFFER_SIZE];
+
+
+
+//Write html page to PROGMEM
+prog_char HTML_01[] PROGMEM = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n";
+prog_char HTML_02[] PROGMEM = "\r\n<html style='font-family:Verdana,Geneva,Georgia,Chicago,Arial,Sans-serif;color:#002d80'>";
+prog_char HTML_03[] PROGMEM = "Welcome to The Smart Power Strip Setup!";
+prog_char HTML_04[] PROGMEM = "<br/><br> Please enter the correspondent number of your Wi-Fi";
+prog_char HTML_05[] PROGMEM = " network shown in the list below. Also enter your password. <br/><br/>";
+prog_char HTML_06[] PROGMEM = "<form name=\"input\" action=\"\" method=\"post\">List number:<input style='margin";
+prog_char HTML_07[] PROGMEM =  "-left:5px' value='' name='nr'/><br/>Password: <input type='password' name='p' style='";
+prog_char HTML_08[] PROGMEM = "margin-left:19px'/><br/><br><input type=\"submit\" value=\"Submit\"></form> <br/><br/> ";
+prog_char HTML_09[] PROGMEM = "You can also manually enter your network credentials below.<p>";
+prog_char HTML_10[] PROGMEM = "<form name=\"input2\" action=\"http:\\169.254.1.1\" method=\"post\">SSID:<input style";
+prog_char HTML_11[] PROGMEM = "='margin-left:5px' value='' name='nr'/><br/>Password: <input type='password'";
+prog_char HTML_12[] PROGMEM = "name='p' style='margin-left:19px'/><br/>Clicking <input type=\"submit\" value=\"Submit\"";
+prog_char HTML_13[] PROGMEM = "> will update the configuration and restart the board.</form> </html>";
+
+
+
+//Write commands for AD-HOC to progmem
+prog_char CMD_01[] PROGMEM = "set wlan join 4";
+prog_char CMD_02[] PROGMEM = "set wlan ssid Powerstrip";
+prog_char CMD_03[] PROGMEM = "set wlan chan 1";
+prog_char CMD_04[] PROGMEM = "set wlan chan 1";
+prog_char CMD_05[] PROGMEM = "set ip address 169.254.1.1";
+prog_char CMD_06[] PROGMEM = "set ip remote 80";
+prog_char CMD_07[] PROGMEM = "set ip local 80";
+prog_char CMD_08[] PROGMEM = "set ip netmask 255.255.0.0";
+prog_char CMD_09[] PROGMEM = "set ip dhcp 0";
+prog_char CMD_10[] PROGMEM = "save";
+prog_char CMD_11[] PROGMEM = "reboot";
+
+
+//HTML indices
+#define IDX_HTML_01      0
+#define IDX_HTML_02      IDX_HTML_01 + 1
+#define IDX_HTML_03      IDX_HTML_01 + 2
+#define IDX_HTML_04      IDX_HTML_01 + 3
+#define IDX_HTML_05      IDX_HTML_01 + 4
+#define IDX_HTML_06      IDX_HTML_01 + 5
+#define IDX_HTML_07      IDX_HTML_01 + 6
+#define IDX_HTML_08      IDX_HTML_01 + 7
+#define IDX_HTML_09      IDX_HTML_01 + 8
+#define IDX_HTML_10      IDX_HTML_01 + 9
+#define IDX_HTML_11      IDX_HTML_01 + 10
+#define IDX_HTML_12      IDX_HTML_01 + 11
+#define IDX_HTML_13      IDX_HTML_01 + 12
+
+//Command indices
+#define IDX_CMD_01      IDX_HTML_10 + 1
+#define IDX_CMD_02      IDX_CMD_01 + 1
+#define IDX_CMD_03      IDX_CMD_01 + 2
+#define IDX_CMD_04      IDX_CMD_01 + 3
+#define IDX_CMD_05      IDX_CMD_01 + 4
+#define IDX_CMD_06      IDX_CMD_01 + 5
+#define IDX_CMD_07      IDX_CMD_01 + 6
+#define IDX_CMD_08      IDX_CMD_01 + 7
+#define IDX_CMD_09      IDX_CMD_01 + 8
+#define IDX_CMD_10      IDX_CMD_01 + 9
+#define IDX_CMD_11      IDX_CMD_01 + 10
+
+PROGMEM const char *WT_string_table[] =      
+{  
+  HTML_01,
+  HTML_02,
+  HTML_03,
+  HTML_04,
+  HTML_05,
+  HTML_06,
+  HTML_07,
+  HTML_08,
+  HTML_09,
+  HTML_10,
+  HTML_11,
+  HTML_12,
+  HTML_13,
+  CMD_01,
+  CMD_02,
+  CMD_03,
+  CMD_04,
+  CMD_05,
+  CMD_06,
+  CMD_07,
+  CMD_08,
+  CMD_09,
+  CMD_10,
+  CMD_11
+};
+
+// GetBuffer_P
+// Returns pointer to a supplied Buffer, from PROGMEM based on StringIndex provided.
+char* GetBuffer_P(const int StringIndex, char* pBuffer, int bufSize) { 
+  strncpy_P(pBuffer, (char*)pgm_read_word(&(WT_string_table[StringIndex])), bufSize);  
+  return pBuffer; 
+}
 
 
 // Used to set up communication ------------------------------------
-void setup() {
+void setup() 
+{
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
-  SerialRNXV.begin(9600);
-  
-  //Set up UART communication
-  WiFly.setUart(&SerialRNXV);
+
+  Serial << "RAM > setup: " << freeMemory() << endl;
+
+  //Serial << "Loading configuration from EEPROM..." << endl;
+  // loadConfig();
+  // Serial << "SSID: " << ssid << endl << "Passphrase: " << passphrase << endl;
 
   //Delay for booting WiFly module
-  delay(100);
+  delay(1000);
+
+  Serial.println(("Starting WiFly"));
+  WiFly.begin();
+  Serial.println("Started successfully!");
+
+
+  //Set up adhoc
+  //setup_adhoc();
 
   //Initialize WiFi connection to server
-  WiFi_init (); 
-}
-// Used to set up communication ------------------------------------
+  wifi_init();
 
+  //   time_t tCurrent= (time_t) WiFly.getTime(); 
+  //   setTime( tCurrent );
+  //   Serial << hour() << minute()<< endl;
+
+
+}
 
 // MAIN LOOP ---------------------------------------------------------------------------------------------------------
-void loop() {
-  if (WiFi_read()){ //Check for input from server and read
-    //parse(); //Parse input
-    //check_state(); //Check if states have changed
+void loop() 
+{
+  if(counter==0) Serial << "RAM at loop: " << freeMemory() << endl;
+
+  if(wifi_read()) //Check for input from server and read
+  { 
+    
+    parse(); //Parse input
+    check_state(); //Check if states have changed
   }
 
+  //  else 
+  //  {
+  //    Serial << "Read failed"<<endl;
+  //    wifi_reconnect(false);
+  //  }
+
   counter++;
-  if(counter>=20){
-
-    sample(); // Sample inputs
-
+  if(counter>=100000) 
+  {
+    //sample(); // Sample inputs
     //powerCalc();//Calculate active power  
-
     //Send calculated values and state
-    if(bufferIsEmpty){ //Send data if buffer is empty 
-      if(!send_update()){ //Try to send data and add to buffer when failure
+    if(bufferIsEmpty) 
+    { //Send data if buffer is empty 
+      if(!wifi_send()) 
+      { //Try to send data and add to buffer when failure
         //addToBuffer(); //Add measurements to buffer if they can't be sent
-        
         //Reconnect if send_update fails (???)
-        Serial.println();
-        Serial.println("reconnecting.");
-        client.stop();
-        client.connect();
+        //wifi_reconnect(false);
       }
-      counter=0;
     }
-    else{ // If buffer is not empty then add latest data to buffer then try to send buffered values
+
+    else 
+    { // If buffer is not empty then add latest data to buffer then try to send buffered values
       //addToBuffer();
       //sendBuffered();
     }
+    counter=0;
   }
 }
-
 
 //METHODS -------------------------------------------------------------------------------------------------------------
 
@@ -153,156 +310,328 @@ void powerCalc () {
 }
 
 // Algorithm for parsing the control message string into arrays--
-void parse (){
-  int first_semicolon = control_message.indexOf(';');
-  for (int x = 0; x < 4; x++) {
-    Switch_State_ControlSignal[x] = control_message.charAt(first_semicolon - 1 + x*2);
-  }  
-}
-// Algorithm for parsing the control message string into arrays--
+void parse() 
+{
+  int first_semicolon = String(bufUpdate).indexOf(';');
+  for(int x = 0; x < 4; x++)
+  {
+    ControlSignal[x] = String(bufUpdate).charAt(first_semicolon - 1 + x*2) - '0';
+  }
 
+}
 
 // Check if there are changes between Switch_State[] - Switch_State_ControlSignal[] and IF there are... SWITCH!!!!---
-void check_state(){
-  for (int x = 0; x < 4; x++){
-    if(Switch_State[x] != Switch_State_ControlSignal[x]){
+void check_state() 
+{
+  for(int x = 0; x < 4; x++)
+  {
+    if(Switch_State[x] != ControlSignal[x]) 
+    {
       power_switching(x);
     }
+
   }
+
 }
-// Check if there are changes between Switch_State[] - Switch_State_ControlSignal[] and IF there are... SWITCH!!!!---
-
-
-//Samples the analog inputs <sampleNumber> times -----------------
-void sample () {
-  for (int i = 0; i <= sampleNumber-1 ; i++){
-    for (int x = 0; x <= analogLayoutLength-1; x++){    // Read the analog pins and store them in analogReadstate
-      analogReadState[x][i] = analogRead(analogLayout[x]);
-    }
-    delay(1);
-  }
-}
-//Samples the analog inputs <sampleNumber> times -----------------
-
-
-// Read the values from the analog and digital pins---------------
-//void read_pins(){
-//  for (int x = 0; x <= analogLayoutLength-1; x++){    // Read the analog pins and store them in analogReadstate
-//    analogReadState[x] = analogRead(analogLayout[x]);
-//  }
-//
-//  for (int x = 0; x <= digitalLayoutLength-1; x++){  // Read the digital pins and store them in digitalReadstate
-//    digitalReadState[x] = digitalRead(digitalLayout[x]);
-//  }
-//}
-// Read the values from the analog and digital pins---------------
-
-
-// Print the values through the serial port ----------------------
-// Analog Values --------------
-//void print_values(){
-//
-//  Serial.println("Value on A0: "); 
-//  Serial.print(analogReadState[0]);
-//
-//  Serial.println("Value on A1: "); 
-//  Serial.print(analogReadState[1]);
-//
-//  Serial.println("Value on A2: "); 
-//  Serial.print(analogReadState[2]);
-//
-//  Serial.println("Value on A3: "); 
-//  Serial.print(analogReadState[3]);
-//
-//  Serial.println("Value on A4: "); 
-//  Serial.print(analogReadState[4]);
-//
-//  Serial.println("Value on A5: "); 
-//  Serial.print(analogReadState[5]);
-//}
-// Analog Values --------------
-// Print the values through the serial port ----------------------
-
 
 // Function for switching each socket -----------------------------
-void power_switching(int socket){
-  if (Switch_State[socket] == HIGH){
+void power_switching(int socket) 
+{
+  if(Switch_State[socket] == HIGH) 
+  {
     Switch_State[socket] = LOW;
     digitalWrite(socket, LOW);
   }
-  if (Switch_State[socket] == LOW){
+
+  else if(Switch_State[socket] == LOW) 
+  {
     Switch_State[socket] = HIGH;
     digitalWrite(socket, HIGH);
-  } 
+  }
+
 }
-// Function for switching each socket -----------------------------
+
+//Samples the analog inputs <sampleNumber> times -----------------
+void sample() 
+{
+  for(int i = 0; i <= sampleNumber-1 ; i++)
+  {
+    for(int x = 0; x <= analogLayoutLength-1; x++)
+    { // Read the analog pins and store them in analogReadstate
+      analogReadState[x][i] = analogRead(analogLayout[x]);
+    }
+
+    delay(1);
+  }
+
+}
 
 
 // Initialize WiFi module and join network-------------------------
-void WiFi_init () {
+boolean wifi_init() 
+{
 
-  Serial.println("[Wifly]");
 
-  WiFly.begin();
+  //  Serial << "Trying to scan..." << endl;
+  //  char* pNetScan;
+  //  const int buflen = 200;
+  //  char* scan = WiFly.showNetworkScan(pNetScan,buflen);
+  //  Serial << scan << endl;
 
-  Serial.println("finished beginning");
+  //WiFly.reboot();
+  //delay(3000);
 
-  if (!WiFly.join(ssid, passphrase)) {
-    Serial.println("Association failed.");
-        while (1) {
-          // Hang on failure.
-        }
-  }
-  Serial.println("connecting...");
-}
-// Initialize WiFi module and join network-------------------------
+  //Remove WiFly TCP responses *HELLO* and *CLOS*
+  char prompt[INDICATOR_BUFFER_SIZE];
+  WiFly.SendCommandSimple("set comm remote 0",prompt);
+  WiFly.SendCommandSimple("set comm close *CLOS*",prompt);
+  WiFly.SendCommandSimple("set wlan join 1",prompt);
+  WiFly.SendCommandSimple("save",prompt);
+  WiFly.SendCommandSimple("reboot",prompt);
+  delay(1000);
 
-// Try to read input from server ----------------------------------
-boolean WiFi_read() {
-  if (client.connected()) { //Check if client is connected
-    if (client.available()){
-    while (client.available()){ //Check if client has received data
-      char temp = client.read();
-      //control_message = String (control_message + client.read());
-      Serial.print(temp);
-      return true;
+  //Set network properties
+  WiFly.setAuthMode( WIFLY_AUTH_WPA2_PSK);
+  WiFly.setJoinMode( WIFLY_JOIN_AUTO );
+  WiFly.setDHCPMode( WIFLY_DHCP_ON );
+
+  //Update status
+  WiFly.getDeviceStatus();
+  if(! WiFly.isifUp() ) 
+  {
+    //Leave just in case
+    WiFly.leave();
+
+    // Join WiFi network
+    if(WiFly.setSSID(ssid)) 
+    {
+      Serial << "SSID:"<< ssid << endl;
     }
+
+    if(WiFly.setPassphrase(passphrase)) 
+    {
+      Serial << "Pass:"<< passphrase << endl;
     }
-    else return false;
+
+    Serial << "Joining... :"<< ssid << endl;
+    if( WiFly.join() ) 
+    {
+      Serial << "Joined " << ssid << endl;
+      WiFly.setNTP( NTP_SERVER ); //NTP server
+    }
+
+    else 
+    {
+      Serial << F("Join to ") << ssid << F(" failed.") << endl << "Hang";
+      while(true) 
+      {
+        //Hang
+      }
+
+    }
+    WiFly.exitCommandMode();
+
   }
 
-  else if (!client.connected()) {
-    Serial.println();
-    Serial.println("reconnecting.");
-    client.stop();
-    client.connect();
-    WiFi_read();
+
+  // Clear out prior requests.
+  WiFly.flush();
+  while(WiFly.available()) WiFly.read();
+  WiFly.closeConnection(); //close any open connections (for reboot of arduino)
+  // Try to connect to server
+  WiFly.setRemotePort(PORT);
+
+  //if(!WiFly.isConnectionOpen()){  //TESTING WITHOUT THIS
+  if(!WiFly.openConnection(SERVER)) 
+  {
+    Serial.println("Failed:S");
+    if(!wifi_reconnect(true))
+      return false;
   }
-}
-// Try to read input from server ----------------------------------
 
-
-// Try to send data to server -------------------------------------
-boolean send_update () {
-
-  String sendStream = String(ID + ":" + activePower[0] + ";" + activePower[1] + ";" + activePower[2] + ";" + activePower[3] + ":" + Switch_State[0] + ";" + Switch_State[1] + ";" + Switch_State[2] + ";" + Switch_State[3]); // ID:10;11;12;13:1;0;0;0
-
-  if (client.connected()) {
-    Serial.println("connected");
-    //client.println("GET HTTP/1.0");//sendStream);
-    client.write("Please just work");
+  else 
+  {
+    Serial.println("Success:S");
+    WiFly.exitCommandMode();
     return true;
   } 
-  else if (!client.connected()) {
-    return false;
-  }  
 }
-<<<<<<< HEAD
+
+// Try to reconnect to server -------------------------------------
+boolean wifi_reconnect(boolean isReInitialized) 
+{
+  if(!isReInitialized) 
+  {
+    Serial << "Reconnecting..."<< endl;
+    WiFly.closeConnection();
+    if(WiFly.openConnection(SERVER)) 
+    {
+      Serial << "Connected!"<< endl;
+      return true;
+    }
+
+    else 
+    {
+      Serial << "Failed"<< endl << "Re-initialize"<< endl;
+      WiFly.reboot();
+      delay(1000);
+      if(!wifi_init()) 
+      {
+        Serial << "Hanged!"<< endl;
+        while(true) 
+        {
+          //Hang
+        }
+
+      }
+
+    }
+
+  }
+
+}
+
+// Try to read input from server ----------------------------------
+boolean wifi_read() 
+{
+
+  if(WiFly.isConnectionOpen()) 
+  { //Check if client is connected
+    //Reset buffer
+    memset(bufRequest,0,REQUEST_BUFFER_SIZE);
+    //byte bufRequestt[80];
+    //int i = 0;
+    PString req (bufRequest,REQUEST_BUFFER_SIZE);
+    while(WiFly.available()) //WiFly.isConnectionOpen() &&
+    { //Check if client has received data
+      req << WiFly.read();
+      //control_message = String (control_message + client.read());
+      //i++;
+    }
+
+    //WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "testID:",false, 1000);
+    if((String(bufRequest).length()!=0)){
+
+      memset(bufUpdate,0,UPDATE_BUFFER_SIZE);
+      int temporary[3];
+      int j=0;
+      for(int i=0;i<String(bufRequest).length()-1;j++){
+        temporary[0] = (bufRequest[i]-'0')*10;
+        temporary[1] = (bufRequest[i+1]-'0');
+        if(temporary[0]+temporary[1] <= 13){
+          bufUpdate[j]=(temporary[0]+temporary[1])*10 + (bufRequest[i+2]-'0');
+          i=i+3;
+        }
+        else{
+          bufUpdate[j]=(temporary[0]+temporary[1]);
+          i=i+2;
+        }
+      }
+      Serial << "Svar: " << bufUpdate <<"slut" <<endl;
+      return true;
+    }
+    return false;
+  }
+  else {
+    return false;
+  }
+}
+
 // Try to send data to server -------------------------------------
-=======
-// Try to send data to server -------------------------------------
+boolean wifi_send() 
+{
+  //String sendStream = String(ID + ":"+ "100"+ ";"+ "100"+ ";"+ "100"+ ";"+ "100"+ ":"+ Switch_State[0] + ";"+ Switch_State[1] + ";"+ Switch_State[2] + ";"+ Switch_State[3]); // ID:10;11;12;13:1;0;0;0
+  if(WiFly.isConnectionOpen()) 
+  {
+    PString strSend(bufRequest, REQUEST_BUFFER_SIZE);
+    Serial << "Writing" << endl;    
+    strSend << ID << ":" << "100" << ";" << "100" << ";" << "100" << ";" << "100" << ":" << 
+      Switch_State[0] << ";" << Switch_State[1] << ";" << Switch_State[2] << ";" << Switch_State[3]; // ID:10;11;12;13:1;0;0;0
+    WiFly <<  (const char*) strSend << endl;
+    Serial <<  (const char*) strSend << endl;
+    return true;
+  }
+
+  else return false;
+}
+
+  //String sendStream = String(ID + ":" + activePower[0] + ";" + activePower[1] + ";" + activePower[2] + ";" + activePower[3] + ":" + Switch_State[0] + ";" + Switch_State[1] + ";" + Switch_State[2] + ";" + Switch_State[3]); // ID:10;11;12;13:1;0;0;0
+
+// Set up ADHOC network -------------------------------------------
+void setup_adhoc(){
+  Serial << "Setting up ADHOC" << endl;
+  char bufCMD[CMD_BUFFER_SIZE];
+  //Load commands from PROGMEM and send to WiFly
+  for(int i=IDX_CMD_01 ; i<=IDX_CMD_11 ; i++){
+    WiFly.SendCommandSimple(GetBuffer_P(i,bufCMD,CMD_BUFFER_SIZE),prompt);
+  }
+  delay(3000);
+  Serial <<"IP: " << WiFly.getIP(bufTemp,TEMP_BUFFER_SIZE) << endl;
+
+  listen();
+}
 
 
+//Listen for incomming connections -------------------------------
+void listen () {
+  Serial << "Listening!" << endl;
+  if(WiFly.serveConnection()){
+    Serial << "Incoming!" << endl;
+
+    WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "HTTP/1.1", 1000);
+    //Serial << "HTTP/1.1 message, bytes: " << strlen(responseBuffer) << endl << responseBuffer << endl;
+
+    // Record request
+    char nextChar;
+    //int i = 0;
+    //memset(bufRequest,0,REQUEST_BUFFER_SIZE); //Reset buffer
+    while ((nextChar = WiFly.read()) > -1){
+      // bufRequest[i]=nextChar;
+      //i++; 
+    }
+    Serial << bufRequest << endl;
+
+    //Make responsebuffer
+    char bufResponse[RESPONSE_BUFFER_SIZE];
+    //Make response printer
+    PString strResponse(bufResponse,RESPONSE_BUFFER_SIZE);
+
+    Serial <<"Mem:R " << freeMemory()<< endl;
+
+    //Look for HTTP GET
+    if ( strstr(bufRequest, "GET / HTTP/1.1" ) ) {
+      //char* pNetScan;
+      //const int buflen = 200;
+      //char* scan = WiFly.showNetworkScan(pNetScan,buflen);
+      Serial << "JAA"<< endl;
+      WiFly.exitCommandMode();
+      //Send HTML page from PROGMEM
+      for (int j=IDX_HTML_01 ; j<=IDX_HTML_13 ;j++){
+        WiFly << GetBuffer_P(j,bufResponse,RESPONSE_BUFFER_SIZE);
+      }
+      WiFly <<"\r\n\r\n" << "\t";
+    }
+    WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "HTTP/1.1",false, 35000);
+
+    while ((nextChar = WiFly.read()) > -1){
+    }
+    Serial << bufRequest << endl; 
+    if (strstr(bufRequest, "POST" )) {
+
+      Serial << "score" << endl;
+
+      //strResponse << OK << STYLE << "Updated (not). The board has been restarted with the new configuration.</html>";
+    }
+
+  }
+  else{
+    Serial << "Timed out!" << endl;
+    listen();
+  }
+  listen();
+}
+
+/*
 // Fuction for finding zero in an array ---------------------------
 int findZero(apvector<int> &array){
   int lastValue = array[0];
@@ -313,6 +642,7 @@ int findZero(apvector<int> &array){
   }
 }
 // Fuction for finding zero in an array ---------------------------
+
 
 // Gör om funktionen nedan......
 //Function to find highest (maximum) value in array ---------------
@@ -329,6 +659,7 @@ int maximumValue(apvector<int> &array)
 }
 
 //Function to find highest (maximum) value in array ---------------
+
 
 // Phase Differnece -----------------------------------------------
 void phaseDifference(){
@@ -348,12 +679,38 @@ void phaseDifference(){
   }
 }
 // Phase Difference -----------------------------------------------
+*/
+
+//Load WiFi configuration from EEPROM ---------------------------------
+void loadConfig() {
+  // To make sure there are settings, and they are YOURS!
+  // If nothing is found it will use the default settings.
+  if (EEPROM.read(CONFIG_START + 0) == CONFIG_VERSION[0] &&
+    EEPROM.read(CONFIG_START + 1) == CONFIG_VERSION[1] &&
+    EEPROM.read(CONFIG_START + 2) == CONFIG_VERSION[2])
+    for (unsigned int t=0; t<sizeof(storage); t++)
+      *((char*)&storage + t) = EEPROM.read(CONFIG_START + t);
+}
 
 
+//Save WiFi configuration to EEPROM -----------------------------------
+void saveConfig() {
+  for (unsigned int t=0; t<sizeof(storage); t++)
+    EEPROM.write(CONFIG_START + t, *((char*)&storage + t));
+}
+// Use like this!
+//void loop() {
+// [...]
+//  int i = storage.c - 'a';
+// [...]
 
-
+// [...]
+//  storage.c = 'a';
+//  if (ok)
+//    saveConfig();
+// [...]
+//}
 
 // Sätt ett bestämt värde där man vet en spännigstopp!! utgå ifrån det när du hittar toppen för strömmen....
 
 
->>>>>>> Phase-Differance
