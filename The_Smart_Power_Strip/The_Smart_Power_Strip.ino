@@ -61,8 +61,8 @@ int sampleRate; // Samples/sek
 
 
 // Will be loaded from EEPROM
-char passphrase[] = "jbregell";
-char ssid[] = "Toshimoshi";
+char passphrase[] = "grisnils";
+char ssid[] = "Davids";
 const char* chan = "1"; // Channel for adhoc
 
 //The following is for storing in EEPROM
@@ -123,11 +123,11 @@ prog_char HTML_02[] PROGMEM = "\r\n<html style='font-family:Verdana,Geneva,Georg
 prog_char HTML_03[] PROGMEM = "Welcome to The Smart Power Strip Setup!";
 prog_char HTML_04[] PROGMEM = "<br/><br> Please enter the correspondent number of your Wi-Fi";
 prog_char HTML_05[] PROGMEM = " network shown in the list below. Also enter your password. <br/><br/>";
-prog_char HTML_06[] PROGMEM = "<form name=\"input\" action=\"\" method=\"post\">List number:<input style='margin";
+prog_char HTML_06[] PROGMEM = "<form name=\"input\" action=\"\" method=\"get\">List number:<input style='margin";
 prog_char HTML_07[] PROGMEM =  "-left:5px' value='' name='nr'/><br/>Password: <input type='password' name='p' style='";
 prog_char HTML_08[] PROGMEM = "margin-left:19px'/><br/><br><input type=\"submit\" value=\"Submit\"></form> <br/><br/> ";
 prog_char HTML_09[] PROGMEM = "You can also manually enter your network credentials below.<p>";
-prog_char HTML_10[] PROGMEM = "<form name=\"input2\" action=\"http:\\169.254.1.1\" method=\"post\">SSID:<input style";
+prog_char HTML_10[] PROGMEM = "<form name=\"input2\" action=\"\" method=\"get\">SSID:<input style";
 prog_char HTML_11[] PROGMEM = "='margin-left:5px' value='' name='nr'/><br/>Password: <input type='password'";
 prog_char HTML_12[] PROGMEM = "name='p' style='margin-left:19px'/><br/>Clicking <input type=\"submit\" value=\"Submit\"";
 prog_char HTML_13[] PROGMEM = "> will update the configuration and restart the board.</form> </html>";
@@ -135,15 +135,15 @@ prog_char HTML_13[] PROGMEM = "> will update the configuration and restart the b
 
 
 //Write commands for AD-HOC to progmem
-prog_char CMD_01[] PROGMEM = "set wlan join 4";
-prog_char CMD_02[] PROGMEM = "set wlan ssid Powerstrip";
-prog_char CMD_03[] PROGMEM = "set wlan chan 1";
-prog_char CMD_04[] PROGMEM = "set wlan chan 1";
+prog_char CMD_01[] PROGMEM = "set wlan auth 0";
+prog_char CMD_02[] PROGMEM = "set ip dhcp 0";
+prog_char CMD_03[] PROGMEM = "set wlan ssid Powerstrip";
+prog_char CMD_04[] PROGMEM = "set wlan chan 11";
 prog_char CMD_05[] PROGMEM = "set ip address 169.254.1.1";
 prog_char CMD_06[] PROGMEM = "set ip remote 80";
 prog_char CMD_07[] PROGMEM = "set ip local 80";
 prog_char CMD_08[] PROGMEM = "set ip netmask 255.255.0.0";
-prog_char CMD_09[] PROGMEM = "set ip dhcp 0";
+prog_char CMD_09[] PROGMEM = "set wlan join 4";
 prog_char CMD_10[] PROGMEM = "save";
 prog_char CMD_11[] PROGMEM = "reboot";
 
@@ -164,7 +164,7 @@ prog_char CMD_11[] PROGMEM = "reboot";
 #define IDX_HTML_13      IDX_HTML_01 + 12
 
 //Command indices
-#define IDX_CMD_01      IDX_HTML_10 + 1
+#define IDX_CMD_01      IDX_HTML_13 + 1
 #define IDX_CMD_02      IDX_CMD_01 + 1
 #define IDX_CMD_03      IDX_CMD_01 + 2
 #define IDX_CMD_04      IDX_CMD_01 + 3
@@ -234,10 +234,10 @@ void setup()
 
 
   //Set up adhoc
-  //setup_adhoc();
+  setup_adhoc();
 
   //Initialize WiFi connection to server
-  wifi_init();
+  //wifi_init();
 
   //   time_t tCurrent= (time_t) WiFly.getTime(); 
   //   setTime( tCurrent );

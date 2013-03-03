@@ -10,8 +10,8 @@ void setup_adhoc(){
   for(int i=IDX_CMD_01 ; i<=IDX_CMD_11 ; i++){
     WiFly.SendCommandSimple(GetBuffer_P(i,bufCMD,CMD_BUFFER_SIZE),prompt);
   }
-  delay(3000);
-  Serial <<"IP: " << WiFly.getIP(bufTemp,TEMP_BUFFER_SIZE) << endl;
+  delay(1000);
+//  Serial << "IP: " << WiFly.getIP(bufTemp,TEMP_BUFFER_SIZE) << endl;
 
   listen();
 }
@@ -19,10 +19,13 @@ void setup_adhoc(){
 
 //Listen for incomming connections -------------------------------
 void listen () {
+  while(true){
+  memset(bufRequest,'0',REQUEST_BUFFER_SIZE);
+  //WiFly.getDeviceStatus();
   Serial << "Listening!" << endl;
   if(WiFly.serveConnection()){
     Serial << "Incoming!" << endl;
-
+    
     WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "HTTP/1.1", 1000);
     //Serial << "HTTP/1.1 message, bytes: " << strlen(responseBuffer) << endl << responseBuffer << endl;
 
@@ -30,10 +33,12 @@ void listen () {
     char nextChar;
     //int i = 0;
     //memset(bufRequest,0,REQUEST_BUFFER_SIZE); //Reset buffer
-    while ((nextChar = WiFly.read()) > -1){
+    
+          while ((nextChar = WiFly.read()) > -1){}
+   // while ((nextChar = WiFly.read()) > -1){
       // bufRequest[i]=nextChar;
       //i++; 
-    }
+    //}
     Serial << bufRequest << endl;
 
     //Make responsebuffer
@@ -49,21 +54,35 @@ void listen () {
       //const int buflen = 200;
       //char* scan = WiFly.showNetworkScan(pNetScan,buflen);
       Serial << "JAA"<< endl;
-      WiFly.exitCommandMode();
+      //WiFly.exitCommandMode();
       //Send HTML page from PROGMEM
       for (int j=IDX_HTML_01 ; j<=IDX_HTML_13 ;j++){
         WiFly << GetBuffer_P(j,bufResponse,RESPONSE_BUFFER_SIZE);
       }
       WiFly <<"\r\n\r\n" << "\t";
+      delay(60000);
     }
-    WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "HTTP/1.1",false, 35000);
+    //WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "HTTP/1.1",false, 35000);
 
-    while ((nextChar = WiFly.read()) > -1){
+    //while ((nextChar = WiFly.read()) > -1){
+    //}
+    //Serial << bufRequest << endl; 
+    else if (strstr(bufRequest, "GET /" )) {
+        
+    int idx_nr = String(bufRequest).indexOf("=");
+    boolean done = false;
+    char number[15];
+    int k=0;
+  while(!done)
+  {
+    number[k] = String(bufRequest).charAt(idx_nr + 1 + k );
+    if(number[k]=='&'){
+      number[k]=0;
+      done=true;
+      Serial << "SSID: " << number << endl;
     }
-    Serial << bufRequest << endl; 
-    if (strstr(bufRequest, "POST" )) {
-
-      Serial << "score" << endl;
+    k++;
+  }
 
       //strResponse << OK << STYLE << "Updated (not). The board has been restarted with the new configuration.</html>";
     }
@@ -73,6 +92,6 @@ void listen () {
     Serial << "Timed out!" << endl;
     listen();
   }
-  listen();
+  }
 }
 
