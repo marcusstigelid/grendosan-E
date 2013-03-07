@@ -4,8 +4,6 @@
 // Initialize WiFi module and join network-------------------------
 boolean wifi_init() 
 {
-
-
   //  Serial << "Trying to scan..." << endl;
   //  char* pNetScan;
   //  const int buflen = 200;
@@ -31,7 +29,7 @@ boolean wifi_init()
 
   //Update status
   WiFly.getDeviceStatus();
-  if(! WiFly.isifUp() ) 
+  if(!WiFly.isifUp()) 
   {
     //Leave just in case
     WiFly.leave();
@@ -57,20 +55,22 @@ boolean wifi_init()
     else 
     {
       Serial << F("Join to ") << ssid << F(" failed.") << endl << "Hang";
-      while(true) 
-      {
-        //Hang
-      }
-
+      return false;
     }
     WiFly.exitCommandMode();
 
   }
 
-
   // Clear out prior requests.
   WiFly.flush();
   while(WiFly.available()) WiFly.read();
+
+  return true;
+}
+
+// Try to reconnect to server -------------------------------------
+boolean wifi_reconnect()//boolean isReInitialized) 
+{
   WiFly.closeConnection(); //close any open connections (for reboot of arduino)
   // Try to connect to server
   WiFly.setRemotePort(PORT);
@@ -79,7 +79,6 @@ boolean wifi_init()
   if(!WiFly.openConnection(SERVER)) 
   {
     Serial.println("Failed:S");
-    if(!wifi_reconnect(true))
       return false;
   }
 
@@ -89,40 +88,6 @@ boolean wifi_init()
     WiFly.exitCommandMode();
     return true;
   } 
-}
-
-// Try to reconnect to server -------------------------------------
-boolean wifi_reconnect(boolean isReInitialized) 
-{
-  if(!isReInitialized) 
-  {
-    Serial << "Reconnecting..."<< endl;
-    WiFly.closeConnection();
-    if(WiFly.openConnection(SERVER)) 
-    {
-      Serial << "Connected!"<< endl;
-      return true;
-    }
-
-    else 
-    {
-      Serial << "Failed"<< endl << "Re-initialize"<< endl;
-      WiFly.reboot();
-      delay(1000);
-      if(!wifi_init()) 
-      {
-        Serial << "Hanged!"<< endl;
-        while(true) 
-        {
-          //Hang
-        }
-
-      }
-
-    }
-
-  }
-
 }
 
 // Try to read input from server ----------------------------------

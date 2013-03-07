@@ -83,6 +83,21 @@ void listen () {
     }
     k++;
   }
+    idx_nr = String(bufRequest).indexOf("="); //här ska det va något annat
+    done = false;
+    char pass[15];
+    k=0;
+  while(!done)
+  {
+    pass[k] = String(bufRequest).charAt(idx_nr + 1 + k );
+    if(pass[k]=='&'){
+      pass[k]=0;
+      done=true;
+      Serial << "Passphrase: " << pass << endl;
+    }
+    k++;
+  }
+
 
       //strResponse << OK << STYLE << "Updated (not). The board has been restarted with the new configuration.</html>";
     }
