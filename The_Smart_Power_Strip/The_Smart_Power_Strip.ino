@@ -16,7 +16,10 @@
 #include <MemoryFree.h>
 #include <Time.h>
 #include <EEPROM.h>
+
 //#include "Credentials.h"
+
+
 // Arrays used for reading the pins -------------------------------
 const int analogLayout[] = {
   A0, A1, A2, A3, A4, A5 }
@@ -220,6 +223,8 @@ void setup()
   Serial.begin(9600);
 
   Serial << "RAM > setup: " << freeMemory() << endl;
+
+  SPI.begin();
 
   //Serial << "Loading configuration from EEPROM..." << endl;
   // loadConfig();
