@@ -2,7 +2,7 @@
 
 
 void addToBuffer(){
-  SPI.transfer();
+  //SPI.transfer();
 }
 
 void sendBuffered(){

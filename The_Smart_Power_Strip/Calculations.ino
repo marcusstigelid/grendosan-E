@@ -11,23 +11,28 @@ void sample()
       analogReadState[x][i] = analogRead(analogLayout[x]);
     }
 
-    delay(1);
+    //delay(1);
   }
 
 }
 
 void powerCalc () {
 
-  int squaredSum[sampleNumber]={0,0,0,0,0};
-  int RMS[sampleNumber-1]={0,0,0,0};
-  int activePower[sampleNumber-1]={0,0,0,0};
+    memset(squaredSum,0,analogLayoutLength);
+    memset(RMS,0,analogLayoutLength);
+    memset(activePower,0,analogLayoutLength);
   for (int i=0; i<=analogLayoutLength-1;i++){
+    squaredSum[i]=0;
     for(int j=0; j<=sampleNumber-1; j++){
-      squaredSum[i]=squaredSum[i] + pow(analogReadState[i][j],2);
+      analogReadState[i][j]=analogReadState[i][j]-512;
+      squaredSum[i]=squaredSum[i] + pow((analogReadState[i][j]),2);
     }
-    RMS[i]=sqrt(squaredSum[i]/sampleNumber);
+    if(i!=0)
+    RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88/0.185;
+    else
+    RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88;
   }
-  //phaseDifference();
+  phaseDifference();
   
   for (int i=1; i<=analogLayoutLength-1;i++){
     activePower[i-1]=RMS[0]*RMS[i]*cos(phaseDiff[i-1]);
@@ -71,15 +76,15 @@ void phaseDifference(){
     for(int x=0; x<sampleNumber; x++){
       local_vector[x] = analogReadState[y][x]; // Store in the local variable
     }
-    if(y=0){
-      firstzeroCrossing = findZero(50, local_vector);//Find first zero crossing in the voltage vecor with guidance from the given sample index (50 in this case )
+    if(y == 0){
+      firstzeroCrossing = findZero(25, local_vector);//Find first zero crossing in the voltage vecor with guidance from the given sample index (50 in this case )
       secondzeroCrossing = findZero((firstzeroCrossing + 40), local_vector); // the findzeroCrossing(argument 1) should be close to the end of 0----->T as guidance so 40 is probably wrong... 
       highestVoltageSampleNumber = maximumValue(firstzeroCrossing, secondzeroCrossing, local_vector); // Load the highest voltage sample
-    }
+      }
     if(y!=0){
        int sampleDiff =  maximumValue(firstzeroCrossing, secondzeroCrossing, local_vector) - highestVoltageSampleNumber; //(May be positive or negative)
        phaseDiff[y] = (((sampleDiff)*sampleRate)/0.02)*360;  //Algorithm for converting samples to degrees
-    }
-  }
+      }
+   }
 }
 // Phase Difference -----------------------------------------------

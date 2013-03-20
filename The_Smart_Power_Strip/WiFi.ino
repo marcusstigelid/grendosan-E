@@ -144,7 +144,7 @@ boolean wifi_send()
   {
     PString strSend(bufRequest, REQUEST_BUFFER_SIZE);
     Serial << "Writing" << endl;    
-    strSend << ID << ":" << "100" << ";" << "100" << ";" << "100" << ";" << "100" << ":" << 
+    strSend << ID << ":" << activePower[0] << ";" << activePower[1] << ";" << activePower[2] << ";" << activePower[3] << ":" << 
       Switch_State[0] << ";" << Switch_State[1] << ";" << Switch_State[2] << ";" << Switch_State[3]; // ID:10;11;12;13:1;0;0;0
     WiFly <<  (const char*) strSend << endl;
     Serial <<  (const char*) strSend << endl;

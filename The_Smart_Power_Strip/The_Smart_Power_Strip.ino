@@ -34,7 +34,7 @@ const int digitalLayout[] =
 // Global Variables -----------------------------------------------
 const int analogLayoutLength = 6; // The length of the analogLayout vector.
 const int digitalLayoutLength = 12; // The length of the digitalLayout vector.
-const int sampleNumber = 500;     // Number of sampels to make for each measurement
+const int sampleNumber = 50;     // Number of sampels to make for each measurement
 
 int sensorValue = 0;        // value read from the pot  - From example
 int outputValue = 0;        // value output to the PWM (analog out) - From example
@@ -55,8 +55,9 @@ int ControlSignal[4] = {1,1,1,1}; // Array for the revieved controlsignals
 String ID = "testID";
 long counter = 0;
 boolean bufferIsEmpty = true;
-int RMS[sampleNumber-1];
-int activePower[sampleNumber-1];
+double RMS[analogLayoutLength];
+double squaredSum[analogLayoutLength];
+int activePower[analogLayoutLength-1];
 int phaseDiff[analogLayoutLength];
 int sampleRate; // Samples/sek
 
@@ -239,10 +240,10 @@ void setup()
 
 
   //Set up adhoc
-  setup_adhoc();
+  //setup_adhoc();
 
   //Initialize WiFi connection to server
-  //wifi_init();
+  wifi_init();
 
   //   time_t tCurrent= (time_t) WiFly.getTime(); 
   //   setTime( tCurrent );
