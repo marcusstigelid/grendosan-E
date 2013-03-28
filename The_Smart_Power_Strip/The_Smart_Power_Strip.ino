@@ -7,7 +7,6 @@
  
  */
 
-#include <SPI.h>
 #include <Arduino.h>
 #include <Streaming.h>
 #include <SoftwareSerial.h>
@@ -35,6 +34,18 @@ const int digitalLayout[] =
 const int analogLayoutLength = 6; // The length of the analogLayout vector.
 const int digitalLayoutLength = 12; // The length of the digitalLayout vector.
 const int sampleNumber = 50;     // Number of sampels to make for each measurement
+
+#define DATAOUT 11//MOSI
+#define DATAIN  12//MISO 
+#define SPICLOCK  13//sck
+#define SLAVESELECT 10//ss
+
+#define WREN  0x06
+#define WRDI  0x04
+#define RDSR  0x05
+#define WRSR  0x01
+#define READ  0x0B
+#define WRITE 0x02
 
 int sensorValue = 0;        // value read from the pot  - From example
 int outputValue = 0;        // value output to the PWM (analog out) - From example
@@ -64,21 +75,29 @@ int sampleRate; // Samples/sek
 // Global Variables ------------------------------------------------
 
 
-// Will be loaded from EEPROM
-char passphrase[] = "grisnils";
-char ssid[] = "Davids";
+// Are loaded from EEPROM
+//char passphrase[] = "grisnils";
+//char ssid[] = "Davids";
 const char* chan = "1"; // Channel for adhoc
+
+
+boolean bufferEmpty = true;
 
 //The following is for storing in EEPROM
 // ID of the settings block
-#define CONFIG_VERSION "ls1"
+#define CONFIG_VERSION "ls4"
 
 // Tell it where to store your config data in EEPROM
 #define CONFIG_START 32
 
-//char ssid[32];
-//char passphrase[32];
+// The variables of the settings
+char ssid[32];
+char passphrase[32];
+PString ssidP(ssid,32);
+PString passphraseP(passphrase,32);
 int securityType;
+byte readIndex[3]={0x00,0x00,0x00};
+byte storeIndex[3]={0x00,0x00,0x00};
 
 struct StoreStruct {
   // This is for detection if they are our settings
@@ -87,13 +106,38 @@ struct StoreStruct {
   char ssid[32];
   char passphrase[32];
   int securityType;
-} 
+  byte readIndex[3];
+  byte storeIndex[3];
+
+}
+
 storage = {
   CONFIG_VERSION,
   // The default values
-  "Philip och Jennifers Wifi",
-  "W-nånting",
-  WIFLY_AUTH_WPA2_PSK
+  "Testssid",
+  "Testpass",
+  WIFLY_AUTH_WPA2_PSK,
+  {
+    0x00,0x00,0x00  }
+  ,
+  {
+    0x00,0x00,0x00  }
+};
+
+//Storage structure for FLASH memory
+#define datalength 19
+struct FLASHStruct {
+  int activePower[analogLayoutLength-1];
+  boolean Switch_State[4];
+  char time[7]; 
+
+
+}
+
+storageStruct = {
+  {100,100,100,100},
+  {HIGH, HIGH, HIGH, HIGH},
+  "tidigt"
 };
 
 
@@ -214,9 +258,7 @@ char* GetBuffer_P(const int StringIndex, char* pBuffer, int bufSize) {
   strncpy_P(pBuffer, (char*)pgm_read_word(&(WT_string_table[StringIndex])), bufSize);  
   return pBuffer; 
 }
-
-
-
+  
 // Used to set up communication ------------------------------------
 void setup() 
 {
@@ -225,11 +267,11 @@ void setup()
 
   Serial << "RAM > setup: " << freeMemory() << endl;
 
-  SPI.begin();
+  SPI_setup();
 
-  //Serial << "Loading configuration from EEPROM..." << endl;
-  // loadConfig();
-  // Serial << "SSID: " << ssid << endl << "Passphrase: " << passphrase << endl;
+  Serial << "Loading configuration from EEPROM..." << endl;
+  loadEEPROM();
+  Serial << "SSID: " << ssid << endl << "Passphrase: " << passphrase << endl;
 
   //Delay for booting WiFly module
   delay(1000);
