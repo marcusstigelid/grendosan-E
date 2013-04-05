@@ -283,7 +283,13 @@ void setup()
 
   //Set up adhoc
   //setup_adhoc();
-
+  
+//  ssidP="Milkyway 5";
+//  passphraseP="grisnils";
+  ssidP="DJLumia";
+  passphraseP="grisnils";
+  saveEEPROM();
+  loadEEPROM();
   //Initialize WiFi connection to server
   wifi_init();
 

@@ -23,7 +23,7 @@ boolean wifi_init()
   delay(1000);
 
   //Set network properties
-  WiFly.setAuthMode( WIFLY_AUTH_WPA2_PSK);
+  WiFly.setAuthMode( WIFLY_AUTH_WPA1_2);//WPA2_PSK);//WPA1);//
   WiFly.setJoinMode( WIFLY_JOIN_AUTO );
   WiFly.setDHCPMode( WIFLY_DHCP_ON );
 
