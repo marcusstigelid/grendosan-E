@@ -11,6 +11,7 @@ void setup_adhoc(){
     WiFly.SendCommandSimple(GetBuffer_P(i,bufCMD,CMD_BUFFER_SIZE),prompt);
   }
   delay(1000);
+  Serial << freeMemory() << endl;
   Serial << "IP: " << WiFly.getIP(bufTemp,TEMP_BUFFER_SIZE) << endl;
 
   listen();
@@ -21,25 +22,22 @@ void setup_adhoc(){
 void listen () {
   while(true){
     memset(bufRequest,'0',REQUEST_BUFFER_SIZE);
+    memset(bufTemp,'0',TEMP_BUFFER_SIZE);
     //WiFly.getDeviceStatus();
     Serial << "Listening!" << endl;
     if(WiFly.serveConnection()){
+      while(WiFly.isConnectionOpen()){
       Serial << "Incoming!" << endl;
 
-      WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "HTTP/1.1", 1000);
+      WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "HTTP/1.1",true, 10000);
       //Serial << "HTTP/1.1 message, bytes: " << strlen(responseBuffer) << endl << responseBuffer << endl;
 
       // Record request
       char nextChar;
-      //int i = 0;
-      //memset(bufRequest,0,REQUEST_BUFFER_SIZE); //Reset buffer
 
         while ((nextChar = WiFly.read()) > -1){
       }
-      // while ((nextChar = WiFly.read()) > -1){
-      // bufRequest[i]=nextChar;
-      //i++; 
-      //}
+
       Serial << bufRequest << endl;
 
       //Declare temporary for parsing
@@ -48,36 +46,24 @@ void listen () {
       int k=0;
       char pass[32];
 
-
-      //Make responsebuffer
-      char bufResponse[RESPONSE_BUFFER_SIZE];
-      //Make response printer
-      PString strResponse(bufResponse,RESPONSE_BUFFER_SIZE);
-
       Serial <<"Mem:R " << freeMemory()<< endl;
 
       //Look for HTTP GET
       if ( strstr(bufRequest, "GET / HTTP/1.1" ) ) {
-        //char* pNetScan;
-        //const int buflen = 200;
-        //char* scan = WiFly.showNetworkScan(pNetScan,buflen);
-        Serial << "JAA"<< endl;
+        
         //WiFly.exitCommandMode();
         //Send HTML page from PROGMEM
-        for (int j=IDX_HTML_01 ; j<=IDX_HTML_13 ;j++){
-          WiFly << GetBuffer_P(j,bufResponse,RESPONSE_BUFFER_SIZE);
+        for (int j=IDX_HTML_01 ; j<=IDX_HTML_05 ;j++){
+          WiFly << GetBuffer_P(j,bufTemp,TEMP_BUFFER_SIZE);
+        }
+        for (int l=IDX_HTML_05 ; l<=IDX_HTML_13 ;l++){
+          WiFly << GetBuffer_P(l,bufTemp,TEMP_BUFFER_SIZE);
         }
         WiFly <<"\r\n\r\n" << "\t";
-        delay(60000);
+        delay(40000);
+        //WiFly.SendCommandSimple("close",prompt);
+        //WiFly.closeConnection();
       }
-      //WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "HTTP/1.1",false, 35000);
-
-      //while ((nextChar = WiFly.read()) > -1){
-      //}
-      //Serial << bufRequest << endl; 
-
-
-
 
       else if (strstr(bufRequest, "GET /nr" )) {
 
@@ -122,7 +108,10 @@ void listen () {
             Serial << "Name: " << name << endl;
             if(name != 0){
               for(int i=0;i<32;i++){
-                ssid[i]=name[i];
+                if(name[i]!=' ')
+                  ssid[i]=name[i];
+                else
+                  ssid[i]='$';
               }
               Serial << "SSID: " << ssid << endl;
             }
@@ -152,6 +141,10 @@ void listen () {
         //strResponse << OK << STYLE << "Updated (not). The board has been restarted with the new configuration.</html>";
       }
 
+    }
+    char dump;
+    while(WiFly.available()>0)
+    dump=WiFly.read();
     }
     else{
       Serial << "Timed out!" << endl;

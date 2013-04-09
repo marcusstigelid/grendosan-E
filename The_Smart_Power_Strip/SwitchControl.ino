@@ -4,10 +4,10 @@
 // Algorithm for parsing the control message string into arrays--
 void parse() 
 {
-  int first_semicolon = String(bufUpdate).indexOf(';');
+  int first_semicolon = String(bufTemp).indexOf(';');
   for(int x = 0; x < 4; x++)
   {
-    ControlSignal[x] = String(bufUpdate).charAt(first_semicolon - 1 + x*2) - '0';
+    ControlSignal[x] = String(bufTemp).charAt(first_semicolon - 1 + x*2) - '0';
   }
 
 }
