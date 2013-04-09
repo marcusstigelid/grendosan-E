@@ -83,10 +83,13 @@ void storeString(){
   storageStruct.activePower[j]=activePower[j];
   storageStruct.Switch_State[j]=Switch_State[j];
   }
-
-  //char time[7]; //Time will have to be added!!
-  
-  
+  storageStruct.Year = Year;
+  storageStruct.Month = Month;
+  storageStruct.Day = Day;
+  storageStruct.Hour = Hour;
+  storageStruct.Minute = Minute;
+  storageStruct.Second = Second; 
+   
   digitalWrite(SLAVESELECT,LOW);
   spi_transfer(WREN); // Write enable
   digitalWrite(SLAVESELECT,HIGH);
@@ -115,7 +118,11 @@ boolean sendBuffer()
   while(!bufferEmpty){ // Send next value until buffer is empty
     if(readIndex[2]!=storeIndex[2] || readIndex[1]!=storeIndex[1] || readIndex[0]!=storeIndex[0]){ // If readIndex and storeIndex is not equal
       readString(); //Read next buffered values
-      if(true){//wifi_send()) //Try to send loaded values
+      Serial << ID << ":" << activePower[0] << ";" << activePower[1] << ";" << activePower[2] << ";" << activePower[3] << ":" << 
+      Switch_State[0] << ";" << Switch_State[1] << ";" << Switch_State[2] << ";" << Switch_State[3] << ":" << 
+      Year << ";" << Month << ";" << Day << ";" << Hour << ";" << Minute << ";" << Second << endl; // ID:10;11;12;13:1;0;0;0
+      delay(1000);
+      if(wifi_send()){ //Try to send loaded values
         //Update readIndex
         int step;
         if((readIndex[2]+datalength*2)>=256){
@@ -177,8 +184,9 @@ void readString(){
   spi_transfer(readIndex[2]);
   spi_transfer(0x00);
   //Update storageStruct from FLASH
+  byte ch;
   for(int i=0;i<datalength;i++){
-    *((char*)&storageStruct + i) = spi_transfer(0xFF);
+    *((char*)&storageStruct + i)=spi_transfer(0xFF);
   }
   digitalWrite(SLAVESELECT,HIGH); //release chip
   //Update activePower and Switch_State from storageStruct
@@ -186,7 +194,12 @@ void readString(){
   activePower[j]=storageStruct.activePower[j];
   Switch_State[j]=storageStruct.Switch_State[j];
   }
-  //char time[7]; //Will be done later   
+  Year = storageStruct.Year;
+  Month = storageStruct.Month;
+  Day = storageStruct.Day;
+  Hour = storageStruct.Hour;
+  Minute = storageStruct.Minute;
+  Second = storageStruct.Second; 
 }
 
 
