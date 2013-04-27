@@ -118,10 +118,10 @@ boolean sendBuffer()
   while(!bufferEmpty){ // Send next value until buffer is empty
     if(readIndex[2]!=storeIndex[2] || readIndex[1]!=storeIndex[1] || readIndex[0]!=storeIndex[0]){ // If readIndex and storeIndex is not equal
       readString(); //Read next buffered values
-      Serial << ID << ":" << activePower[0] << ";" << activePower[1] << ";" << activePower[2] << ";" << activePower[3] << ":" << 
-      Switch_State[0] << ";" << Switch_State[1] << ";" << Switch_State[2] << ";" << Switch_State[3] << ":" << 
-      Year << ";" << Month << ";" << Day << ";" << Hour << ";" << Minute << ";" << Second << endl; // ID:10;11;12;13:1;0;0;0
-      delay(1000);
+      //Serial << ID << ":" << activePower[0] << ";" << activePower[1] << ";" << activePower[2] << ";" << activePower[3] << ":" << 
+      //Switch_State[0] << ";" << Switch_State[1] << ";" << Switch_State[2] << ";" << Switch_State[3] << ":" << 
+      //Year << ";" << Month << ";" << Day << ":" << Hour << ";" << Minute << ";" << Second << endl; // ID:10;11;12;13:1;0;0;0
+
       if(wifi_send()){ //Try to send loaded values
         //Update readIndex
         int step;

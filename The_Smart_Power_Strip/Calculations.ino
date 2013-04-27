@@ -3,41 +3,97 @@
 
 //Samples the analog inputs <sampleNumber> times -----------------
 void sample() 
-{
-  for(int i = 0; i <= sampleNumber-1 ; i++)
-  {
-    for(int x = 0; x <= analogLayoutLength-1; x++)
-    { // Read the analog pins and store them in analogReadstate
-      analogReadState[x][i] = analogRead(analogLayout[x]);
-    }
+{ 
+  int analogReadState[2][sampleNumber]; // Stores the sampled vectors of the analog pins
+  memset(activePower,0,analogLayoutLength-1);
 
-    //delay(1);
+  //long start,stopp;
+  for(int x = 0; x <= 3; x++) { 
+    for(int i = 0; i <= sampleNumber-1 ; i++)
+    {
+//      if(i==0)
+//      start=micros();
+      // Read the analog pins and store them in analogReadstate
+      analogReadState[0][i] = analogRead(analogLayout[4]);
+      analogReadState[1][i] = analogRead(analogLayout[x]);
+
+      delayMicroseconds(107+333);
+//      if(i==59)
+//      stopp=micros();
+    }
+    //Serial << "Time:" << stopp-start << endl;
+    //if(x==3)
+    delay(10);
+//    for(int m=0;m<sampleNumber;m++){
+//      Serial << analogReadState[1][m] << " ";
+//    }
+//    Serial << endl;
+    //Serial << freeMemory();
+
+//    int medel=0;
+//    for(int k=0;k<sampleNumber;k++){
+//      medel=medel+analogReadState[1][k];
+//    }
+//    Serial << "Medel:" << medel/sampleNumber << endl;
+    powerCalc(analogReadState, x);
+//    medel=0;
+//    for(int k=0;k<sampleNumber;k++){
+//      medel=medel+analogReadState[1][k];
+//    }
+//    Serial << "Medel:" << medel/sampleNumber << endl;
   }
 
 }
 
-void powerCalc () {
+void powerCalc (int analogReadState[][60], int socket) {
 
-    memset(squaredSum,0,analogLayoutLength);
-    memset(RMS,0,analogLayoutLength);
-    memset(activePower,0,analogLayoutLength);
-  for (int i=0; i<=analogLayoutLength-1;i++){
-    squaredSum[i]=0;
-    for(int j=0; j<=sampleNumber-1; j++){
-      analogReadState[i][j]=analogReadState[i][j]-512;
+  double RMS[2]={
+    0,0  };
+  double squaredSum[2]={
+    0,0  };
+  int phaseDiff;
+  int offset;
+  for(int k=0;k<sampleNumber;k++){
+    offset=offset+analogReadState[1][k];
+  }
+  offset=offset/sampleNumber;
+  //Serial << freeMemory();
+  for (int i=0; i<2;i++){
+
+    for(int j=0; j<sampleNumber; j++){
+      analogReadState[i][j]=analogReadState[i][j]-offset;
       squaredSum[i]=squaredSum[i] + pow((analogReadState[i][j]),2);
     }
     if(i!=0)
-    RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88/0.185;
+      RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88/0.185*230/1000;
     else
-    RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88;
+      RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88;
   }
-  phaseDifference();
-  
-  for (int i=1; i<=analogLayoutLength-1;i++){
-    activePower[i-1]=RMS[0]*RMS[i]*cos(phaseDiff[i-1]);
-  }
+  //phaseDiff = phaseDifference(analogReadState);
+
+  activePower[socket]=RMS[1];//RMS[0]*RMS[1]*cos(phaseDiff);
+  //Serial << "Mem:" << freeMemory() << endl;
 }
+
+// Phase Differnece -----------------------------------------------
+int phaseDifference(int analogReadState[][10]){//int analogReadState[][]){
+  int highestVoltageSampleNumber; //Tells on which sample the highest value of the voltage is located
+  int firstzeroCrossing, secondzeroCrossing, phaseDiff;
+  for(int y=0; y<2; y++){
+    if(y == 0){
+      firstzeroCrossing = findZero(25, analogReadState[y]);//Find first zero crossing in the voltage vecor with guidance from the given sample index (50 in this case )
+      secondzeroCrossing = findZero((firstzeroCrossing + 40), analogReadState[y]); // the findzeroCrossing(argument 1) should be close to the end of 0----->T as guidance so 40 is probably wrong... 
+      highestVoltageSampleNumber = maximumValue(firstzeroCrossing, secondzeroCrossing, analogReadState[y]); // Load the highest voltage sample
+    }
+    if(y!=0){
+      int sampleDiff =  maximumValue(firstzeroCrossing, secondzeroCrossing, analogReadState[y]) - highestVoltageSampleNumber; //(May be positive or negative)
+      phaseDiff = (((sampleDiff)*sampleRate)/0.02)*360;  //Algorithm for converting samples to degrees
+    }
+  }
+  Serial << "Mem:Phase:" << freeMemory() << endl;
+  return phaseDiff;
+}
+// Phase Difference -----------------------------------------------
 
 
 // Fuction for finding zero in an array --------------------------- (Part of the Phase Differance calculations)
@@ -55,36 +111,17 @@ int findZero(int init, int array[]){
 //Function to find highest (maximum) value in array --------------- (Part of the Phase Differance calculations)
 int maximumValue(int start, int stop_, int array[])
 {    
-     int max = array[start];       // start with max = first element
-     for(int i = start; i<stop_; i++)
-     {
-          if(array[i] > max){
-                max = array[i];
-          }
-     }
-     return max;                // return highest value in array
+  int max = array[start];       // start with max = first element
+  for(int i = start; i<stop_; i++)
+  {
+    if(array[i] > max){
+      max = array[i];
+    }
+  }
+  return max;                // return highest value in array
 }
 
 //Function to find highest (maximum) value in array --------------- (Part of the Phase Differance calculations)
 
-// Phase Differnece -----------------------------------------------
-void phaseDifference(){
-  int highestVoltageSampleNumber; //Tells on which sample the highest value of the voltage is located
-  int firstzeroCrossing, secondzeroCrossing;
-  int local_vector[sampleNumber]; //Local vector used for calculations
-  for(int y=0; y<analogLayoutLength; y++){
-    for(int x=0; x<sampleNumber; x++){
-      local_vector[x] = analogReadState[y][x]; // Store in the local variable
-    }
-    if(y == 0){
-      firstzeroCrossing = findZero(25, local_vector);//Find first zero crossing in the voltage vecor with guidance from the given sample index (50 in this case )
-      secondzeroCrossing = findZero((firstzeroCrossing + 40), local_vector); // the findzeroCrossing(argument 1) should be close to the end of 0----->T as guidance so 40 is probably wrong... 
-      highestVoltageSampleNumber = maximumValue(firstzeroCrossing, secondzeroCrossing, local_vector); // Load the highest voltage sample
-      }
-    if(y!=0){
-       int sampleDiff =  maximumValue(firstzeroCrossing, secondzeroCrossing, local_vector) - highestVoltageSampleNumber; //(May be positive or negative)
-       phaseDiff[y] = (((sampleDiff)*sampleRate)/0.02)*360;  //Algorithm for converting samples to degrees
-      }
-   }
-}
-// Phase Difference -----------------------------------------------
+
+

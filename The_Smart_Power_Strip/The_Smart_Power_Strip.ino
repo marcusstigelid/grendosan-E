@@ -26,14 +26,14 @@ const int analogLayout[] = {
 ; // Array for the analog pins
 const int digitalLayout[] = 
 {
-  2,3,4,5,6,7,8,9,10,11,12,13 }
+  5,6,7,8};
 
-; //Array for the digital pins. (These will be changed when decided what to use as Rx, Tx etc..)
+//Array for the digital pins. (These will be changed when decided what to use as Rx, Tx etc..)
 // Arrays used for reading the pins -------------------------------
 // Global Variables -----------------------------------------------
 #define analogLayoutLength 6 // The length of the analogLayout vector.
 #define digitalLayoutLength 12 // The length of the digitalLayout vector.
-#define sampleNumber 10     // Number of sampels to make for each measurement
+#define sampleNumber 60    // Number of sampels to make for each measurement
 
 #define DATAOUT 11//MOSI
 #define DATAIN  12//MISO 
@@ -47,39 +47,28 @@ const int digitalLayout[] =
 #define READ  0x0B
 #define WRITE 0x02
 
-int sensorValue = 0;        // value read from the pot  - From example
-int outputValue = 0;        // value output to the PWM (analog out) - From example
-
-int analogReadState[analogLayoutLength][sampleNumber]; // Stores the sampled vectors of the analog pins 
-int digitalReadState[digitalLayoutLength]; // Stores the read state of the digital pins
-int Switch_State[] = 
-{
-  HIGH, HIGH, HIGH, HIGH }; // Array for the switching state of eache socket DEFAULT is TRUE
+boolean Switch_State[4]; // Array for the switching state of each socket
 
 int Switch_to_pin_array[] = 
 {
-  5, 6, 7, 8 }
+  5, 6, 7, 8 }; // Array for mapping states of the switches to the physical pins
+  
+boolean ControlSignal[4] = {
+  1,1,1,1}; // Array for the revieved controlsignals
+  
 
-; // Array for mapping states of the switches to the physical pins
-int ControlSignal[4] = {1,1,1,1}; // Array for the revieved controlsignals
-//String control_message = "id:auth:1;0;1;1"; //The controll message string read from the wifi module                REMOVE
-String ID = "SN-0000010";
+#define ID "SN-0000001"
 long counter = 0;
-double RMS[analogLayoutLength];
-double squaredSum[analogLayoutLength];
+//long loopmillis;
 int activePower[analogLayoutLength-1];
-int phaseDiff[analogLayoutLength];
-int sampleRate; // Samples/sek
+
+#define sampleRate 30*50 // Samples/sek
 
 
 // Global Variables ------------------------------------------------
 
 
-// Are loaded from EEPROM
-//char passphrase[] = "grisnils";
-//char ssid[] = "Davids";
-const char* chan = "1"; // Channel for adhoc
-
+#define chan "1" // Channel for adhoc
 
 boolean bufferEmpty = true;
 boolean joined_once=false;
@@ -87,7 +76,7 @@ boolean REBOOT = true;
 
 //The following is for storing in EEPROM
 // ID of the settings block
-#define CONFIG_VERSION "ls4"
+#define CONFIG_VERSION "ls5"
 
 // Tell it where to store your config data in EEPROM
 #define CONFIG_START 32
@@ -98,8 +87,10 @@ char passphrase[32];
 PString ssidP(ssid,32);
 PString passphraseP(passphrase,32);
 int securityType;
-byte readIndex[3]={0x00,0x00,0x00};
-byte storeIndex[3]={0x00,0x00,0x00};
+byte readIndex[3]={
+  0x00,0x00,0x00};
+byte storeIndex[3]={
+  0x00,0x00,0x00};
 
 struct StoreStruct {
   // This is for detection if they are our settings
@@ -110,7 +101,7 @@ struct StoreStruct {
   int securityType;
   byte readIndex[3];
   byte storeIndex[3];
-
+  boolean Switch_State[4];
 }
 
 storage = {
@@ -120,10 +111,11 @@ storage = {
   "Testpass",
   WIFLY_AUTH_WPA2_PSK,
   {
-    0x00,0x00,0x00  }
+    0x00,0x00,0x00    }
   ,
   {
-    0x00,0x00,0x00  }
+    0x00,0x00,0x00    },
+  {true,true,true,true}
 };
 
 //Storage structure for FLASH memory
@@ -140,8 +132,12 @@ struct FLASHStruct {
 }
 
 storageStruct = {
-  {100,100,100,100},
-  {HIGH, HIGH, HIGH, HIGH},
+  {
+    100,100,100,100  }
+  ,
+  {
+    HIGH, HIGH, HIGH, HIGH  }
+  ,
   1970,
   1,
   1,
@@ -275,11 +271,11 @@ char* GetBuffer_P(const int StringIndex, char* pBuffer, int bufSize) {
   strncpy_P(pBuffer, (char*)pgm_read_word(&(WT_string_table[StringIndex])), bufSize);  
   return pBuffer; 
 }
-  
+
 // Used to set up communication ------------------------------------
 void setup() 
 {
-  
+
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
 
@@ -291,88 +287,100 @@ void setup()
   loadEEPROM();
   //Serial << "SSID: " << ssid << endl << "Passphrase: " << passphrase << endl;
 
+  if(readIndex[2]!=storeIndex[2] || readIndex[1]!=storeIndex[1] || readIndex[0]!=storeIndex[0]){ // If readIndex and storeIndex is not equal
+    bufferEmpty=false;
+  }
+  else
+    bufferEmpty=true;
+
   //Delay for booting WiFly module
   delay(1000);
 
-  Serial.println(("Starting WiFly"));
+  Serial.println(F("Starting WiFly"));
   WiFly.begin();
   Serial.println(F("WiFly:S"));
 
 
-  
-//  char scantemp[200];
-//  //WiFly.StartCommandMode();
-//  Serial << "Scanning...." << endl;
-//  char prompt[INDICATOR_BUFFER_SIZE];
-//  WiFly.SendCommandSimple("$$$",prompt);
-//  delay(1000);
-//  //WiFly.SendCommandSimple("scan",prompt);
-//  WiFly.SendCommand("scan","'", scantemp, 200, true, 5000, true, false) ;
-//  //char chOut;
-//  delay(3500);
-//  for(int i=0 ;i<=200;i++){
-//    Serial << scantemp[i];
-//  }
-//  Serial << "READ" << endl;
-//  //while(true){
-//  while(WiFly.available() > 0) {
-//    Serial.write(WiFly.read());
-//  }
-//}
-//  if(Serial.available()) { // Outgoing data
-//    WiFly.write( (chOut = Serial.read()) );
-//    Serial.write (chOut);
-//  }
+
+  //  char scantemp[200];
+  //  //WiFly.StartCommandMode();
+  //  Serial << "Scanning...." << endl;
+  //  char prompt[INDICATOR_BUFFER_SIZE];
+  //  WiFly.SendCommandSimple("$$$",prompt);
+  //  delay(1000);
+  //  //WiFly.SendCommandSimple("scan",prompt);
+  //  WiFly.SendCommand("scan","'", scantemp, 200, true, 5000, true, false) ;
+  //  //char chOut;
+  //  delay(3500);
+  //  for(int i=0 ;i<=200;i++){
+  //    Serial << scantemp[i];
+  //  }
+  //  Serial << "READ" << endl;
+  //  //while(true){
+  //  while(WiFly.available() > 0) {
+  //    Serial.write(WiFly.read());
+  //  }
+  //}
+  //  if(Serial.available()) { // Outgoing data
+  //    WiFly.write( (chOut = Serial.read()) );
+  //    Serial.write (chOut);
+  //  }
 
 
 
   //Set up adhoc
-//  Serial << freeMemory() << endl;
-//  setup_adhoc();
-//  Serial << endl << ssid << endl << passphrase << endl;
-//  while(true){}
-  
-  ssidP="Philips$iPhone$5";
-//  passphraseP="grisnils";
+  //  Serial << freeMemory() << endl;
+  //  setup_adhoc();
+  //  Serial << endl << ssid << endl << passphrase << endl;
+  //  while(true){}
+
+  ssidP="Davids";//"Philips$iPhone$5";//"Toshimoshi";//;
+  //  passphraseP="grisnils";
   //ssidP="DJLumia";
-  passphraseP="grisnils";
+  passphraseP="grisnils";//"grisnils";//"jbregell"
   saveEEPROM();
   loadEEPROM();
   //Initialize WiFi connection to server
-  
-     for(int j=0; j<4; j++){
-  activePower[j]=storageStruct.activePower[j];
-  Switch_State[j]=storageStruct.Switch_State[j];
+
+  for(int j=0; j<4; j++){
+    activePower[j]=storageStruct.activePower[j];    
+    pinMode(digitalLayout[j], OUTPUT);
+    digitalWrite(digitalLayout[j], Switch_State[j]);
+    pinMode(analogLayout[j],INPUT);
   }
+  pinMode(analogLayout[4],INPUT);
+  analogReference(EXTERNAL);
+
   initialize();
 
-//  while(true){
-//        counter++;
-//    Year = year();
-//    Month = month();
-//    Day = day();
-//    Hour = hour();
-//    Minute = minute();
-//    Second = second ();
-//    Serial << "Second: "<<Second << endl;
-//    addToBuffer();
-//    activePower[2]+=10;
-//    Switch_State[1]=!Switch_State[1];
-//    if(counter>=15){
-//      sendBuffer();
-//      counter =0;
-//      Serial << "IGEN" << endl;
-//      sendBuffer();
-//      while(true){}
-//    }
-//    delay(2000);
-//  }
+  //  while(true){
+  //        counter++;
+  //    Year = year();
+  //    Month = month();
+  //    Day = day();
+  //    Hour = hour();
+  //    Minute = minute();
+  //    Second = second ();
+  //    Serial << "Second: "<<Second << endl;
+  //    addToBuffer();
+  //    activePower[2]+=10;
+  //    Switch_State[1]=!Switch_State[1];
+  //    if(counter>=15){
+  //      sendBuffer();
+  //      counter =0;
+  //      Serial << "IGEN" << endl;
+  //      sendBuffer();
+  //      while(true){}
+  //    }
+  //    delay(2000);
+  //  }
 
   //   time_t tCurrent= (time_t) WiFly.getTime(); 
   //   setTime( tCurrent );
   //   Serial << hour() << minute()<< endl;
-
-
+  //loopmillis=millis();
+  //Serial << loopmillis << endl;
 }
+
 
 

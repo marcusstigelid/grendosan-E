@@ -22,7 +22,11 @@ void loadEEPROM() {
   storeIndex[0] = storage.storeIndex[0];
   storeIndex[1] = storage.storeIndex[1];
   storeIndex[2] = storage.storeIndex[2];
-  securityType = storage.securityType;  
+  securityType = storage.securityType;
+  Switch_State[0] = storage.Switch_State[0];
+  Switch_State[1] = storage.Switch_State[1];
+  Switch_State[2] = storage.Switch_State[2];
+  Switch_State[3] = storage.Switch_State[3];  
 }
 
 
@@ -40,6 +44,11 @@ void saveEEPROM() {
   storage.storeIndex[1] = storeIndex[1];
   storage.storeIndex[2] = storeIndex[2];
   storage.securityType = securityType;
+  storage.Switch_State[0] = Switch_State[0];
+  storage.Switch_State[1] = Switch_State[1];
+  storage.Switch_State[2] = Switch_State[2];
+  storage.Switch_State[3] = Switch_State[3];
+
   //Write storage to EEPROM
   for (unsigned int t=0; t<sizeof(storage); t++)
     EEPROM.write(CONFIG_START + t, *((char*)&storage + t));
