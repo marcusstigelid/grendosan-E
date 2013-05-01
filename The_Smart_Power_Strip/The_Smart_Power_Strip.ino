@@ -179,19 +179,19 @@ char bufTemp[TEMP_BUFFER_SIZE];
 
 
 //Write html page to PROGMEM
-prog_char HTML_01[] PROGMEM = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n";
-prog_char HTML_02[] PROGMEM = "\r\n<html style='font-family:Verdana,Geneva,Georgia,Chicago,Arial,Sans-serif;color:#002d80'>";
-prog_char HTML_03[] PROGMEM = "Welcome to The Smart Power Strip Setup!";
-prog_char HTML_04[] PROGMEM = "<br/><br> Please enter the correspondent number of your Wi-Fi";
-prog_char HTML_05[] PROGMEM = " network shown in the list below. Also enter your password. <br/><br/>";
-prog_char HTML_06[] PROGMEM = "<form name=\"input\" action=\"nr\" method=\"get\">List number:<input style='margin";
-prog_char HTML_07[] PROGMEM =  "-left:5px' value='' name='nr'/><br/>Password: <input type='password' name='p' style='";
-prog_char HTML_08[] PROGMEM = "margin-left:19px'/><br/><br><input type=\"submit\" value=\"Submit\"></form> <br/><br/> ";
-prog_char HTML_09[] PROGMEM = "You can also manually enter your network credentials below.<p>";
+prog_char HTML_01[] PROGMEM = "HTTP/1.1 200 OK\r Content-Type: text/html\r ";
+prog_char HTML_02[] PROGMEM = "Content-Length: 50\r Connection: close\r\n";
+prog_char HTML_03[] PROGMEM = "\r\n <html style='font-family:Verdana,Geneva,Georgia,Chicago,Arial,Sans-serif;color:#002d80'>";
+prog_char HTML_04[] PROGMEM = "Welcome to The Smart Power Strip Setup! <br/><br>";
+prog_char HTML_05[] PROGMEM = "";
+prog_char HTML_06[] PROGMEM = "";
+prog_char HTML_07[] PROGMEM = "";
+prog_char HTML_08[] PROGMEM = "";
+prog_char HTML_09[] PROGMEM = "Please enter your network credentials below.<p>";
 prog_char HTML_10[] PROGMEM = "<form name=\"input2\" action=\"manual\" method=\"get\">SSID:<input style";
 prog_char HTML_11[] PROGMEM = "='margin-left:5px' value='' name='s'/><br/>Password: <input type='password'";
 prog_char HTML_12[] PROGMEM = "name='p' style='margin-left:19px'/><br/>Clicking <input type=\"submit\" value=\"Submit\"";
-prog_char HTML_13[] PROGMEM = "> will update the configuration and restart the board.</form> </html>";
+prog_char HTML_13[] PROGMEM = "> will update the configuration and restart the board.</form> </html> ";
 
 
 
@@ -205,8 +205,14 @@ prog_char CMD_06[] PROGMEM = "set ip remote 80";
 prog_char CMD_07[] PROGMEM = "set ip local 80";
 prog_char CMD_08[] PROGMEM = "set ip netmask 255.255.0.0";
 prog_char CMD_09[] PROGMEM = "set wlan join 4";
-prog_char CMD_10[] PROGMEM = "save";
-prog_char CMD_11[] PROGMEM = "reboot";
+prog_char CMD_10[] PROGMEM = "set comm remote 0";
+prog_char CMD_11[] PROGMEM = "set comm idle 30";
+prog_char CMD_12[] PROGMEM = "set comm time 1000";
+prog_char CMD_13[] PROGMEM = "set comm size 128";
+prog_char CMD_14[] PROGMEM = "set comm match 0x9";
+prog_char CMD_15[] PROGMEM = "set u m 0x0";
+prog_char CMD_16[] PROGMEM = "save";
+prog_char CMD_17[] PROGMEM = "reboot";
 
 
 //HTML indices
@@ -236,6 +242,13 @@ prog_char CMD_11[] PROGMEM = "reboot";
 #define IDX_CMD_09      IDX_CMD_01 + 8
 #define IDX_CMD_10      IDX_CMD_01 + 9
 #define IDX_CMD_11      IDX_CMD_01 + 10
+#define IDX_CMD_12      IDX_CMD_01 + 11
+#define IDX_CMD_13      IDX_CMD_01 + 12
+#define IDX_CMD_14      IDX_CMD_01 + 13
+#define IDX_CMD_15      IDX_CMD_01 + 14
+#define IDX_CMD_16      IDX_CMD_01 + 15
+#define IDX_CMD_17      IDX_CMD_01 + 16
+
 
 PROGMEM const char *WT_string_table[] =      
 {  
@@ -262,7 +275,13 @@ PROGMEM const char *WT_string_table[] =
   CMD_08,
   CMD_09,
   CMD_10,
-  CMD_11
+  CMD_11,
+  CMD_12,
+  CMD_13,
+  CMD_14,
+  CMD_15,
+  CMD_16,
+  CMD_17
 };
 
 // GetBuffer_P

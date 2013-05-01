@@ -25,7 +25,7 @@ void sample()
     //if(x==3)
     delay(10);
 //    for(int m=0;m<sampleNumber;m++){
-//      Serial << analogReadState[1][m] << " ";
+//      Serial << analogReadState[0][m] << " ";
 //    }
 //    Serial << endl;
     //Serial << freeMemory();
@@ -51,7 +51,7 @@ void powerCalc (int analogReadState[][60], int socket) {
     0,0  };
   double squaredSum[2]={
     0,0  };
-  int phaseDiff;
+  double phaseDiff;
   int offset;
   for(int k=0;k<sampleNumber;k++){
     offset=offset+analogReadState[1][k];
@@ -61,36 +61,40 @@ void powerCalc (int analogReadState[][60], int socket) {
   for (int i=0; i<2;i++){
 
     for(int j=0; j<sampleNumber; j++){
+      if(i==1)
       analogReadState[i][j]=analogReadState[i][j]-offset;
+      
       squaredSum[i]=squaredSum[i] + pow((analogReadState[i][j]),2);
     }
     if(i!=0)
-      RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88/0.185*230/1000;
+      RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88/0.185/1000;
     else
-      RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88;
+      RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88/1000*195.2;
   }
-  //phaseDiff = phaseDifference(analogReadState);
-
-  activePower[socket]=RMS[1];//RMS[0]*RMS[1]*cos(phaseDiff);
+  phaseDiff = phaseDifference(analogReadState);
+  Serial << phaseDiff << endl;
+  activePower[socket]=RMS[0]*RMS[1];//*cos(phaseDiff);
   //Serial << "Mem:" << freeMemory() << endl;
 }
 
 // Phase Differnece -----------------------------------------------
-int phaseDifference(int analogReadState[][10]){//int analogReadState[][]){
+double phaseDifference(int analogReadState[][60]){//int analogReadState[][]){
   int highestVoltageSampleNumber; //Tells on which sample the highest value of the voltage is located
-  int firstzeroCrossing, secondzeroCrossing, phaseDiff;
+  int firstzeroCrossing, secondzeroCrossing, sampleDiff;
+  double phaseDiff;
   for(int y=0; y<2; y++){
     if(y == 0){
-      firstzeroCrossing = findZero(25, analogReadState[y]);//Find first zero crossing in the voltage vecor with guidance from the given sample index (50 in this case )
-      secondzeroCrossing = findZero((firstzeroCrossing + 40), analogReadState[y]); // the findzeroCrossing(argument 1) should be close to the end of 0----->T as guidance so 40 is probably wrong... 
+      firstzeroCrossing = findZero(5, analogReadState[y]);//Find first zero crossing in the voltage vecor with guidance from the given sample index (50 in this case )
+      secondzeroCrossing = findZero((firstzeroCrossing + 15), analogReadState[y]); // the findzeroCrossing(argument 1) should be close to the end of 0----->T as guidance so 40 is probably wrong... 
       highestVoltageSampleNumber = maximumValue(firstzeroCrossing, secondzeroCrossing, analogReadState[y]); // Load the highest voltage sample
     }
     if(y!=0){
-      int sampleDiff =  maximumValue(firstzeroCrossing, secondzeroCrossing, analogReadState[y]) - highestVoltageSampleNumber; //(May be positive or negative)
-      phaseDiff = (((sampleDiff)*sampleRate)/0.02)*360;  //Algorithm for converting samples to degrees
+      sampleDiff =  maximumValue(firstzeroCrossing, secondzeroCrossing, analogReadState[y]) - highestVoltageSampleNumber; //(May be positive or negative)
+      Serial << "Diff: " << sampleDiff << endl;
+      phaseDiff = sampleDiff/sampleRate/0.02*360;  //Algorithm for converting samples to degrees
     }
   }
-  Serial << "Mem:Phase:" << freeMemory() << endl;
+  //Serial << "Mem:Phase:" << freeMemory() << endl;
   return phaseDiff;
 }
 // Phase Difference -----------------------------------------------
@@ -101,6 +105,7 @@ int findZero(int init, int array[]){
   int lastValue = array[init];
   for (int i=init; i<sampleNumber; i++){
     if(((lastValue > 0) && (array[i] < 0)) || ((lastValue < 0) && (array[i] > 0)) || array[i] == 0){
+      Serial << "I: " << i << endl;
       return i;
     }
   }
@@ -110,15 +115,18 @@ int findZero(int init, int array[]){
 
 //Function to find highest (maximum) value in array --------------- (Part of the Phase Differance calculations)
 int maximumValue(int start, int stop_, int array[])
-{    
+{ 
+  int maxindex;  
   int max = array[start];       // start with max = first element
   for(int i = start; i<stop_; i++)
   {
     if(array[i] > max){
       max = array[i];
+      maxindex=i;
     }
   }
-  return max;                // return highest value in array
+  Serial << "Max: " << maxindex << endl;
+  return maxindex;                // return highest value in array
 }
 
 //Function to find highest (maximum) value in array --------------- (Part of the Phase Differance calculations)

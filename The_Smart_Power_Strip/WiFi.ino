@@ -20,7 +20,7 @@ boolean wifi_init()
 
   //Update status
   WiFly.getDeviceStatus();
-  if(!WiFly.isifUp()) 
+  if(!WiFly.isAssociated()) 
   {
     //Leave just in case
     WiFly.leave();
@@ -44,7 +44,7 @@ boolean wifi_init()
 
     else 
     {
-      Serial << F("Join to ") << ssid << F(" failed.") << endl << "Hang";
+      Serial << F("Join to ") << ssid << F(" failed.") << endl;
       return false;
     }
     WiFly.exitCommandMode();

@@ -12,7 +12,7 @@ void initialize()
     }
     REBOOT = false;  
   }
-  else{
+  
     if(!joined_once){
       boolean leaveloop=false;
 
@@ -41,7 +41,7 @@ void initialize()
       Second = second ();
       Serial << Year << endl;
     } 
-  }
+  
   wifi_reconnect();
 }
 

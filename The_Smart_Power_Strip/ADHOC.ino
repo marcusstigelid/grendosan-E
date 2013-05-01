@@ -7,7 +7,7 @@ void setup_adhoc(){
   Serial << "Setting up ADHOC" << endl;
   char bufCMD[CMD_BUFFER_SIZE];
   //Load commands from PROGMEM and send to WiFly
-  for(int i=IDX_CMD_01 ; i<=IDX_CMD_11 ; i++){
+  for(int i=IDX_CMD_01 ; i<=IDX_CMD_17 ; i++){
     WiFly.SendCommandSimple(GetBuffer_P(i,bufCMD,CMD_BUFFER_SIZE),prompt);
   }
   delay(1000);
@@ -53,48 +53,45 @@ void listen () {
         
         //WiFly.exitCommandMode();
         //Send HTML page from PROGMEM
-        for (int j=IDX_HTML_01 ; j<=IDX_HTML_05 ;j++){
+        for (int j=IDX_HTML_01 ; j<=IDX_HTML_13 ;j++){
           WiFly << GetBuffer_P(j,bufTemp,TEMP_BUFFER_SIZE);
         }
-        for (int l=IDX_HTML_05 ; l<=IDX_HTML_13 ;l++){
-          WiFly << GetBuffer_P(l,bufTemp,TEMP_BUFFER_SIZE);
-        }
-        WiFly <<"\r\n\r\n" << "\t";
-        delay(40000);
-        //WiFly.SendCommandSimple("close",prompt);
-        //WiFly.closeConnection();
+        WiFly <<"\r\n\r\n" << 0 << "\t";
+        delay(1500);
+        WiFly.SendCommandSimple("close",prompt);
+        WiFly.closeConnection();
       }
 
-      else if (strstr(bufRequest, "GET /nr" )) {
-
-        idx_nr = String(bufRequest).indexOf("nr=") + 2;
-        char number[5];
-        while(!done)
-        {
-          number[k] = String(bufRequest).charAt(idx_nr + 1 + k );
-          if(number[k]=='&'){
-            number[k]=0;
-            done=true;
-            Serial << "Number: " << number << endl;
-          }
-          k++;
-        }
-        idx_nr = String(bufRequest).indexOf("p=") + 1; //här ska det va något annat
-        done = false;
-        k=0;
-        while(!done)
-        {
-          pass[k] = String(bufRequest).charAt(idx_nr + 1 + k );
-          if(pass[k]==' '){
-            pass[k]=0;
-            done=true;
-            Serial << "Passphrase: " << pass << endl;
-          }
-          k++;
-        }
+//      else if (strstr(bufRequest, "GET /nr" )) {
+//
+//        idx_nr = String(bufRequest).indexOf("nr=") + 2;
+//        char number[5];
+//        while(!done)
+//        {
+//          number[k] = String(bufRequest).charAt(idx_nr + 1 + k );
+//          if(number[k]=='&'){
+//            number[k]=0;
+//            done=true;
+//            Serial << "Number: " << number << endl;
+//          }
+//          k++;
+//        }
+//        idx_nr = String(bufRequest).indexOf("p=") + 1; //här ska det va något annat
+//        done = false;
+//        k=0;
+//        while(!done)
+//        {
+//          pass[k] = String(bufRequest).charAt(idx_nr + 1 + k );
+//          if(pass[k]==' '){
+//            pass[k]=0;
+//            done=true;
+//            Serial << "Passphrase: " << pass << endl;
+//          }
+//          k++;
+//        }
 
         //strResponse << OK << STYLE << "Updated (not). The board has been restarted with the new configuration.</html>";
-      }
+//      }
 
       else if (strstr(bufRequest, "GET /manual" )) {
         idx_nr = String(bufRequest).indexOf("s=") + 1;
@@ -108,7 +105,7 @@ void listen () {
             Serial << "Name: " << name << endl;
             if(name != 0){
               for(int i=0;i<32;i++){
-                if(name[i]!=' ')
+                if(name[i]!='+')
                   ssid[i]=name[i];
                 else
                   ssid[i]='$';
@@ -133,7 +130,8 @@ void listen () {
                 passphrase[i]=pass[i];
               }
               Serial << "passphrase: " << passphrase << endl;
-              //return; 
+              saveEEPROM();
+              return; 
             }
           }
           k++;
@@ -142,9 +140,9 @@ void listen () {
       }
 
     }
-    char dump;
-    while(WiFly.available()>0)
-    dump=WiFly.read();
+//    char dump;
+//    while(WiFly.available()>0)
+//    dump=WiFly.read();
     }
     else{
       Serial << "Timed out!" << endl;
