@@ -14,7 +14,6 @@ void loadEEPROM() {
   //Update ssid and passphrase and addresses from storage structure
   for(int i=0;i<32;i++){
     ssid[i]=storage.ssid[i];
-    passphrase[i]=storage.passphrase[i]; 
   }
   readIndex[0] = storage.readIndex[0];
   readIndex[1] = storage.readIndex[1];
@@ -22,7 +21,6 @@ void loadEEPROM() {
   storeIndex[0] = storage.storeIndex[0];
   storeIndex[1] = storage.storeIndex[1];
   storeIndex[2] = storage.storeIndex[2];
-  securityType = storage.securityType;
   Switch_State[0] = storage.Switch_State[0];
   Switch_State[1] = storage.Switch_State[1];
   Switch_State[2] = storage.Switch_State[2];
@@ -35,7 +33,6 @@ void saveEEPROM() {
   //Update ssid and passphrase and addresses to storage structure
   for(int i=0;i<32;i++){
     storage.ssid[i]=ssid[i];
-    storage.passphrase[i]=passphrase[i];
   }
   storage.readIndex[0] = readIndex[0];
   storage.readIndex[1] = readIndex[1];
@@ -43,7 +40,6 @@ void saveEEPROM() {
   storage.storeIndex[0] = storeIndex[0];
   storage.storeIndex[1] = storeIndex[1];
   storage.storeIndex[2] = storeIndex[2];
-  storage.securityType = securityType;
   storage.Switch_State[0] = Switch_State[0];
   storage.Switch_State[1] = Switch_State[1];
   storage.Switch_State[2] = Switch_State[2];

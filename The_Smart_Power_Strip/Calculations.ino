@@ -18,14 +18,18 @@ void sample()
       analogReadState[1][i] = analogRead(analogLayout[x]);
 
       delayMicroseconds(107+333);
-//      if(i==59)
+//      if(i==0)
 //      stopp=micros();
     }
     //Serial << "Time:" << stopp-start << endl;
     //if(x==3)
     delay(10);
 //    for(int m=0;m<sampleNumber;m++){
-//      Serial << analogReadState[0][m] << " ";
+//      Serial << analogReadState[1][m] << " ";
+//    }
+//    Serial << endl;
+//    for(int m=0;m<sampleNumber;m++){
+//      Serial << analogReadState[1][m] << " ";
 //    }
 //    Serial << endl;
     //Serial << freeMemory();
@@ -51,19 +55,20 @@ void powerCalc (int analogReadState[][60], int socket) {
     0,0  };
   double squaredSum[2]={
     0,0  };
-  double phaseDiff;
-  int offset;
+  float phaseDiff;
+  double powertemp, costemp;
+  long offset=0;
   for(int k=0;k<sampleNumber;k++){
     offset=offset+analogReadState[1][k];
   }
   offset=offset/sampleNumber;
   //Serial << freeMemory();
   for (int i=0; i<2;i++){
-
     for(int j=0; j<sampleNumber; j++){
-      if(i==1)
-      analogReadState[i][j]=analogReadState[i][j]-offset;
-      
+      if(i==1){
+        analogReadState[i][j]=analogReadState[i][j]-offset;
+
+      }
       squaredSum[i]=squaredSum[i] + pow((analogReadState[i][j]),2);
     }
     if(i!=0)
@@ -72,16 +77,24 @@ void powerCalc (int analogReadState[][60], int socket) {
       RMS[i]=sqrt(squaredSum[i]/sampleNumber)*4.88/1000*195.2;
   }
   phaseDiff = phaseDifference(analogReadState);
-  Serial << phaseDiff << endl;
-  activePower[socket]=RMS[0]*RMS[1];//*cos(phaseDiff);
+  //Serial << phaseDiff << endl;
+  costemp=cos(phaseDiff);
+  powertemp=RMS[0]*RMS[1]*costemp;
+//  Serial << "Socket: " << socket << endl << "Current: " << RMS[1] << endl << "Voltage: " << RMS[0] << endl;
+//  Serial << "Phase: " << cos(phaseDiff) << endl;
+  if(RMS[1]>=0.055)// && costemp>=0.7)
+    activePower[socket]=powertemp;
+  else
+    activePower[socket]=0;
   //Serial << "Mem:" << freeMemory() << endl;
 }
 
 // Phase Differnece -----------------------------------------------
-double phaseDifference(int analogReadState[][60]){//int analogReadState[][]){
+float phaseDifference(int analogReadState[][60]){//int analogReadState[][]){
   int highestVoltageSampleNumber; //Tells on which sample the highest value of the voltage is located
-  int firstzeroCrossing, secondzeroCrossing, sampleDiff;
-  double phaseDiff;
+  int firstzeroCrossing, secondzeroCrossing;
+  float sampleDiff;
+  float phaseDiff;
   for(int y=0; y<2; y++){
     if(y == 0){
       firstzeroCrossing = findZero(5, analogReadState[y]);//Find first zero crossing in the voltage vecor with guidance from the given sample index (50 in this case )
@@ -90,8 +103,9 @@ double phaseDifference(int analogReadState[][60]){//int analogReadState[][]){
     }
     if(y!=0){
       sampleDiff =  maximumValue(firstzeroCrossing, secondzeroCrossing, analogReadState[y]) - highestVoltageSampleNumber; //(May be positive or negative)
-      Serial << "Diff: " << sampleDiff << endl;
-      phaseDiff = sampleDiff/sampleRate/0.02*360;  //Algorithm for converting samples to degrees
+     // Serial << "Diff: " << sampleDiff << endl;
+      phaseDiff=3.1415*(sampleDiff/30);  //Algorithm for converting samples to degrees
+      //Serial << phaseDiff << endl;
     }
   }
   //Serial << "Mem:Phase:" << freeMemory() << endl;
@@ -105,7 +119,7 @@ int findZero(int init, int array[]){
   int lastValue = array[init];
   for (int i=init; i<sampleNumber; i++){
     if(((lastValue > 0) && (array[i] < 0)) || ((lastValue < 0) && (array[i] > 0)) || array[i] == 0){
-      Serial << "I: " << i << endl;
+      //Serial << "I: " << i << endl;
       return i;
     }
   }
@@ -125,7 +139,7 @@ int maximumValue(int start, int stop_, int array[])
       maxindex=i;
     }
   }
-  Serial << "Max: " << maxindex << endl;
+  //Serial << "Max: " << maxindex << endl;
   return maxindex;                // return highest value in array
 }
 

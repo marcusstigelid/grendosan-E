@@ -2,8 +2,10 @@
      The smart power strip,
  
  Written by Philip Karlsson and David Johansson
+ Electronic Engineering,
+ Chalmers University of Technology
  
- 2013-02-13
+ 2013-05-02
  
  */
 
@@ -57,12 +59,12 @@ boolean ControlSignal[4] = {
   1,1,1,1}; // Array for the revieved controlsignals
   
 
-#define ID "SN-0000001"
+#define ID "SN-0000003"
 long counter = 0;
-//long loopmillis;
+long loopmillis=millis();
 int activePower[analogLayoutLength-1];
 
-#define sampleRate 30*50 // Samples/sek
+const int sampleRate = 1500; // Samples/sek
 
 
 // Global Variables ------------------------------------------------
@@ -76,17 +78,14 @@ boolean REBOOT = true;
 
 //The following is for storing in EEPROM
 // ID of the settings block
-#define CONFIG_VERSION "ls5"
+#define CONFIG_VERSION "ls6"
 
 // Tell it where to store your config data in EEPROM
 #define CONFIG_START 32
 
 // The variables of the settings
 char ssid[32];
-char passphrase[32];
 PString ssidP(ssid,32);
-PString passphraseP(passphrase,32);
-int securityType;
 byte readIndex[3]={
   0x00,0x00,0x00};
 byte storeIndex[3]={
@@ -97,8 +96,6 @@ struct StoreStruct {
   char version[4];
   // The variables of the settings
   char ssid[32];
-  char passphrase[32];
-  int securityType;
   byte readIndex[3];
   byte storeIndex[3];
   boolean Switch_State[4];
@@ -108,8 +105,6 @@ storage = {
   CONFIG_VERSION,
   // The default values
   "Testssid",
-  "Testpass",
-  WIFLY_AUTH_WPA2_PSK,
   {
     0x00,0x00,0x00    }
   ,
@@ -177,61 +172,19 @@ char bufRequest[REQUEST_BUFFER_SIZE];
 char prompt[INDICATOR_BUFFER_SIZE]; 
 char bufTemp[TEMP_BUFFER_SIZE];
 
+//Write commands to progmem
+prog_char CMD_01[] PROGMEM = "set opt device_id Powerstrip";//"set wlan auth 0";
+prog_char CMD_02[] PROGMEM = "run web_app";
+prog_char CMD_03[] PROGMEM = "set sys printlvl 0";//0x10";
+prog_char CMD_04[] PROGMEM = "set wlan linkmon 10";
+prog_char CMD_05[] PROGMEM = "set wlan join 0";
+prog_char CMD_06[] PROGMEM = "set ip flags 0x6";
+prog_char CMD_07[] PROGMEM = "save";
+prog_char CMD_08[] PROGMEM = "reboot";
 
-//Write html page to PROGMEM
-prog_char HTML_01[] PROGMEM = "HTTP/1.1 200 OK\r Content-Type: text/html\r ";
-prog_char HTML_02[] PROGMEM = "Content-Length: 50\r Connection: close\r\n";
-prog_char HTML_03[] PROGMEM = "\r\n <html style='font-family:Verdana,Geneva,Georgia,Chicago,Arial,Sans-serif;color:#002d80'>";
-prog_char HTML_04[] PROGMEM = "Welcome to The Smart Power Strip Setup! <br/><br>";
-prog_char HTML_05[] PROGMEM = "";
-prog_char HTML_06[] PROGMEM = "";
-prog_char HTML_07[] PROGMEM = "";
-prog_char HTML_08[] PROGMEM = "";
-prog_char HTML_09[] PROGMEM = "Please enter your network credentials below.<p>";
-prog_char HTML_10[] PROGMEM = "<form name=\"input2\" action=\"manual\" method=\"get\">SSID:<input style";
-prog_char HTML_11[] PROGMEM = "='margin-left:5px' value='' name='s'/><br/>Password: <input type='password'";
-prog_char HTML_12[] PROGMEM = "name='p' style='margin-left:19px'/><br/>Clicking <input type=\"submit\" value=\"Submit\"";
-prog_char HTML_13[] PROGMEM = "> will update the configuration and restart the board.</form> </html> ";
-
-
-
-//Write commands for AD-HOC to progmem
-prog_char CMD_01[] PROGMEM = "set wlan auth 0";
-prog_char CMD_02[] PROGMEM = "set ip dhcp 0";
-prog_char CMD_03[] PROGMEM = "set wlan ssid Powerstrip";
-prog_char CMD_04[] PROGMEM = "set wlan chan 11";
-prog_char CMD_05[] PROGMEM = "set ip address 169.254.1.1";
-prog_char CMD_06[] PROGMEM = "set ip remote 80";
-prog_char CMD_07[] PROGMEM = "set ip local 80";
-prog_char CMD_08[] PROGMEM = "set ip netmask 255.255.0.0";
-prog_char CMD_09[] PROGMEM = "set wlan join 4";
-prog_char CMD_10[] PROGMEM = "set comm remote 0";
-prog_char CMD_11[] PROGMEM = "set comm idle 30";
-prog_char CMD_12[] PROGMEM = "set comm time 1000";
-prog_char CMD_13[] PROGMEM = "set comm size 128";
-prog_char CMD_14[] PROGMEM = "set comm match 0x9";
-prog_char CMD_15[] PROGMEM = "set u m 0x0";
-prog_char CMD_16[] PROGMEM = "save";
-prog_char CMD_17[] PROGMEM = "reboot";
-
-
-//HTML indices
-#define IDX_HTML_01      0
-#define IDX_HTML_02      IDX_HTML_01 + 1
-#define IDX_HTML_03      IDX_HTML_01 + 2
-#define IDX_HTML_04      IDX_HTML_01 + 3
-#define IDX_HTML_05      IDX_HTML_01 + 4
-#define IDX_HTML_06      IDX_HTML_01 + 5
-#define IDX_HTML_07      IDX_HTML_01 + 6
-#define IDX_HTML_08      IDX_HTML_01 + 7
-#define IDX_HTML_09      IDX_HTML_01 + 8
-#define IDX_HTML_10      IDX_HTML_01 + 9
-#define IDX_HTML_11      IDX_HTML_01 + 10
-#define IDX_HTML_12      IDX_HTML_01 + 11
-#define IDX_HTML_13      IDX_HTML_01 + 12
 
 //Command indices
-#define IDX_CMD_01      IDX_HTML_13 + 1
+#define IDX_CMD_01      0
 #define IDX_CMD_02      IDX_CMD_01 + 1
 #define IDX_CMD_03      IDX_CMD_01 + 2
 #define IDX_CMD_04      IDX_CMD_01 + 3
@@ -239,32 +192,9 @@ prog_char CMD_17[] PROGMEM = "reboot";
 #define IDX_CMD_06      IDX_CMD_01 + 5
 #define IDX_CMD_07      IDX_CMD_01 + 6
 #define IDX_CMD_08      IDX_CMD_01 + 7
-#define IDX_CMD_09      IDX_CMD_01 + 8
-#define IDX_CMD_10      IDX_CMD_01 + 9
-#define IDX_CMD_11      IDX_CMD_01 + 10
-#define IDX_CMD_12      IDX_CMD_01 + 11
-#define IDX_CMD_13      IDX_CMD_01 + 12
-#define IDX_CMD_14      IDX_CMD_01 + 13
-#define IDX_CMD_15      IDX_CMD_01 + 14
-#define IDX_CMD_16      IDX_CMD_01 + 15
-#define IDX_CMD_17      IDX_CMD_01 + 16
-
 
 PROGMEM const char *WT_string_table[] =      
 {  
-  HTML_01,
-  HTML_02,
-  HTML_03,
-  HTML_04,
-  HTML_05,
-  HTML_06,
-  HTML_07,
-  HTML_08,
-  HTML_09,
-  HTML_10,
-  HTML_11,
-  HTML_12,
-  HTML_13,
   CMD_01,
   CMD_02,
   CMD_03,
@@ -272,16 +202,7 @@ PROGMEM const char *WT_string_table[] =
   CMD_05,
   CMD_06,
   CMD_07,
-  CMD_08,
-  CMD_09,
-  CMD_10,
-  CMD_11,
-  CMD_12,
-  CMD_13,
-  CMD_14,
-  CMD_15,
-  CMD_16,
-  CMD_17
+  CMD_08
 };
 
 // GetBuffer_P
@@ -304,7 +225,6 @@ void setup()
 
   //Serial << "Loading configuration from EEPROM..." << endl;
   loadEEPROM();
-  //Serial << "SSID: " << ssid << endl << "Passphrase: " << passphrase << endl;
 
   if(readIndex[2]!=storeIndex[2] || readIndex[1]!=storeIndex[1] || readIndex[0]!=storeIndex[0]){ // If readIndex and storeIndex is not equal
     bufferEmpty=false;
@@ -320,46 +240,10 @@ void setup()
   Serial.println(F("WiFly:S"));
 
 
-
-  //  char scantemp[200];
-  //  //WiFly.StartCommandMode();
-  //  Serial << "Scanning...." << endl;
-  //  char prompt[INDICATOR_BUFFER_SIZE];
-  //  WiFly.SendCommandSimple("$$$",prompt);
-  //  delay(1000);
-  //  //WiFly.SendCommandSimple("scan",prompt);
-  //  WiFly.SendCommand("scan","'", scantemp, 200, true, 5000, true, false) ;
-  //  //char chOut;
-  //  delay(3500);
-  //  for(int i=0 ;i<=200;i++){
-  //    Serial << scantemp[i];
-  //  }
-  //  Serial << "READ" << endl;
-  //  //while(true){
-  //  while(WiFly.available() > 0) {
-  //    Serial.write(WiFly.read());
-  //  }
-  //}
-  //  if(Serial.available()) { // Outgoing data
-  //    WiFly.write( (chOut = Serial.read()) );
-  //    Serial.write (chOut);
-  //  }
-
-
-
-  //Set up adhoc
-  //  Serial << freeMemory() << endl;
-  //  setup_adhoc();
-  //  Serial << endl << ssid << endl << passphrase << endl;
-  //  while(true){}
-
-  ssidP="Davids";//"Philips$iPhone$5";//"Toshimoshi";//;
-  //  passphraseP="grisnils";
-  //ssidP="DJLumia";
-  passphraseP="grisnils";//"grisnils";//"jbregell"
-  saveEEPROM();
-  loadEEPROM();
-  //Initialize WiFi connection to server
+//  ssidP="Toshimoshi";//"Philips$iPhone$5";//"Toshimoshi";//;
+//  passphraseP="jbregell";//"grisnils";//"jbregell"
+//  saveEEPROM();
+//  loadEEPROM();
 
   for(int j=0; j<4; j++){
     activePower[j]=storageStruct.activePower[j];    
@@ -369,36 +253,9 @@ void setup()
   }
   pinMode(analogLayout[4],INPUT);
   analogReference(EXTERNAL);
-
+  
+  //Initialize WiFi connection to server
   initialize();
-
-  //  while(true){
-  //        counter++;
-  //    Year = year();
-  //    Month = month();
-  //    Day = day();
-  //    Hour = hour();
-  //    Minute = minute();
-  //    Second = second ();
-  //    Serial << "Second: "<<Second << endl;
-  //    addToBuffer();
-  //    activePower[2]+=10;
-  //    Switch_State[1]=!Switch_State[1];
-  //    if(counter>=15){
-  //      sendBuffer();
-  //      counter =0;
-  //      Serial << "IGEN" << endl;
-  //      sendBuffer();
-  //      while(true){}
-  //    }
-  //    delay(2000);
-  //  }
-
-  //   time_t tCurrent= (time_t) WiFly.getTime(); 
-  //   setTime( tCurrent );
-  //   Serial << hour() << minute()<< endl;
-  //loopmillis=millis();
-  //Serial << loopmillis << endl;
 }
 
 

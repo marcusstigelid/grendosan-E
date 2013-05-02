@@ -4,37 +4,32 @@
 // Initialize WiFi module and join network-------------------------
 boolean wifi_init() 
 {
-
-  //Remove WiFly TCP responses *HELLO* and *CLOS*
-  WiFly.SendCommandSimple("set comm remote 0",prompt);
-  WiFly.SendCommandSimple("set comm close *CLOS*",prompt);
-  WiFly.SendCommandSimple("set wlan join 1",prompt);
-  WiFly.SendCommandSimple("save",prompt);
-  WiFly.SendCommandSimple("reboot",prompt);
+  char bufCMD[CMD_BUFFER_SIZE];
+  //Remove WiFly TCP responses *HELLO* and *CLOS*  
+  for(int i=IDX_CMD_03 ; i<=IDX_CMD_08 ; i++){
+    WiFly.SendCommandSimple(GetBuffer_P(i,bufCMD,CMD_BUFFER_SIZE),prompt);
+  }
   delay(2000);
 
-  //Set network properties
-  WiFly.setAuthMode( WIFLY_AUTH_WPA2_PSK);//WPA1
-  WiFly.setJoinMode( WIFLY_JOIN_AUTO );
   WiFly.setDHCPMode( WIFLY_DHCP_ON );
 
   //Update status
   WiFly.getDeviceStatus();
-  if(!WiFly.isAssociated()) 
+  if(WiFly.isifUp()==0) 
   {
     //Leave just in case
     WiFly.leave();
 
     // Join WiFi network
-    if(WiFly.setSSID(ssid)) 
-    {
-      Serial << "SSID:"<< ssid << endl;
-    }
-
-    if(WiFly.setPassphrase(passphrase)) 
-    {
-      Serial << "Pass:"<< passphrase << endl;
-    }
+//    if(WiFly.setSSID(ssid)) 
+//    {
+//      Serial << "SSID:"<< ssid << endl;
+//    }
+//
+//    if(WiFly.setPassphrase(passphrase)) 
+//    {
+//      Serial << "Pass:"<< passphrase << endl;
+//    }
 
     Serial << "Joining... :"<< ssid << endl;
     if( WiFly.join(ssid) ) 
@@ -93,11 +88,9 @@ boolean wifi_read()
     //byte bufRequestt[80];
     //int i = 0;
     PString req (bufRequest,REQUEST_BUFFER_SIZE);
-    while(WiFly.available())
+    while(WiFly.available()>0)
     { //Check if client has received data
       req << WiFly.read();
-      //control_message = String (control_message + client.read());
-      //i++;
     }
 
     //WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "testID:",false, 1000);
@@ -131,18 +124,16 @@ boolean wifi_read()
 // Try to send data to server -------------------------------------
 boolean wifi_send() 
 {
-  //String sendStream = String(ID + ":"+ "100"+ ";"+ "100"+ ";"+ "100"+ ";"+ "100"+ ":"+ Switch_State[0] + ";"+ Switch_State[1] + ";"+ Switch_State[2] + ";"+ Switch_State[3]); // ID:10;11;12;13:1;0;0;0
-  //WiFly.getDeviceStatus();
-//  WiFly.SendCommandSimple("$$$",prompt);
-//  WiFly.SendCommandSimple("exit",prompt);
-  //WiFly.exitCommandMode();
-  if(WiFly.isConnectionOpen() && WiFly.isAssociated()) 
+
+   //Serial << WiFly.getDeviceStatus() << endl;
+  
+  if(WiFly.isConnectionOpen())// && WiFly.isifUp()!=0)// && WiFly.isAssociated()) 
   {
-    
-    //delay(1000);
-//    char ads;
-//    while(WiFly.available()>0)
-//    ads=WiFly.read();
+
+     //WiFly.exitCommandMode();
+    //WiFly.write("exit/r");//.SendCommandSimple("exit",prompt);
+    //delay(100);
+//Serial << micros() << endl;
     memset(bufRequest,'0',REQUEST_BUFFER_SIZE);
     PString strSend(bufRequest, REQUEST_BUFFER_SIZE);
     Serial << "Sending" << endl;    
@@ -152,6 +143,7 @@ boolean wifi_send()
     Serial <<  (const char*) strSend << endl;
     return true;
   }
+
 
   else return false;
 }
