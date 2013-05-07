@@ -79,10 +79,10 @@ void powerCalc (int analogReadState[][60], int socket) {
   phaseDiff = phaseDifference(analogReadState);
   //Serial << phaseDiff << endl;
   costemp=cos(phaseDiff);
-  powertemp=RMS[0]*RMS[1]*costemp;
+  powertemp=RMS[0]*RMS[1];//*costemp;
 //  Serial << "Socket: " << socket << endl << "Current: " << RMS[1] << endl << "Voltage: " << RMS[0] << endl;
 //  Serial << "Phase: " << cos(phaseDiff) << endl;
-  if(RMS[1]>=0.055)// && costemp>=0.7)
+  if(RMS[1]>=0.06)// && costemp>=0.7)
     activePower[socket]=powertemp;
   else
     activePower[socket]=0;

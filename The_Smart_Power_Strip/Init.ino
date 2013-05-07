@@ -30,9 +30,7 @@ void initialize()
       if(year()!=1970){
         leaveloop=true;
         joined_once = true;
-      }
-      else if(!WiFly.isAssociated())
-        leaveloop=true;        
+      }      
     }
     Year = year();
     Month = month();

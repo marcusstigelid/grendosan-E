@@ -4,53 +4,41 @@
 // Initialize WiFi module and join network-------------------------
 boolean wifi_init() 
 {
-  char bufCMD[CMD_BUFFER_SIZE];
-  //Remove WiFly TCP responses *HELLO* and *CLOS*  
-  for(int i=IDX_CMD_03 ; i<=IDX_CMD_08 ; i++){
-    WiFly.SendCommandSimple(GetBuffer_P(i,bufCMD,CMD_BUFFER_SIZE),prompt);
-  }
-  delay(2000);
+  if(!joined_once){
+    char bufCMD[CMD_BUFFER_SIZE];
+    //Remove WiFly TCP responses *HELLO* and *CLOS*  
+    for(int i=IDX_CMD_03 ; i<=IDX_CMD_08 ; i++){
+      WiFly.SendCommandSimple(GetBuffer_P(i,bufCMD,CMD_BUFFER_SIZE),prompt);
+    }
+    delay(2000);
 
-  WiFly.setDHCPMode( WIFLY_DHCP_ON );
+    WiFly.setDHCPMode( WIFLY_DHCP_ON );
+  }
 
   //Update status
   WiFly.getDeviceStatus();
   if(WiFly.isifUp()==0) 
   {
     //Leave just in case
-    WiFly.leave();
+    //WiFly.leave();
 
-    // Join WiFi network
-//    if(WiFly.setSSID(ssid)) 
-//    {
-//      Serial << "SSID:"<< ssid << endl;
-//    }
-//
-//    if(WiFly.setPassphrase(passphrase)) 
-//    {
-//      Serial << "Pass:"<< passphrase << endl;
-//    }
-
-    Serial << "Joining... :"<< ssid << endl;
+    Serial << F("Joining: ")<< ssid << endl;
     if( WiFly.join(ssid) ) 
     {
-      Serial << "Joined " << ssid << endl; 
-      }
+      Serial << F("Joined")<< endl; 
+      return true;
+    }
 
     else 
     {
-      Serial << F("Join to ") << ssid << F(" failed.") << endl;
+      Serial << F("Fail") << endl;
       return false;
     }
-    WiFly.exitCommandMode();
+    //WiFly.exitCommandMode();
 
   }
-
-  // Clear out prior requests.
-  WiFly.flush();
-  while(WiFly.available()) WiFly.read();
-
-  return true;
+  else
+    return true;
 }
 
 // Try to reconnect to server -------------------------------------
@@ -63,13 +51,13 @@ boolean wifi_reconnect()
   //if(!WiFly.isConnectionOpen()){  //TESTING WITHOUT THIS
   if(!WiFly.openConnection(SERVER)) 
   {
-    Serial.println("Failed:S");
-      return false;
+    Serial.println("Fail");
+    return false;
   }
 
   else 
   {
-    Serial.println("Success:S");
+    Serial.println("Connect");
     WiFly.exitCommandMode();
     return true;
   } 
@@ -78,9 +66,6 @@ boolean wifi_reconnect()
 // Try to read input from server ----------------------------------
 boolean wifi_read() 
 {
-//  WiFly.getDeviceStatus();
-//  WiFly.exitCommandMode();
-//  delay(10);
   if(true)//WiFly.isTCPConnected()) 
   { //Check if client is connected
     //Reset buffer
@@ -93,7 +78,6 @@ boolean wifi_read()
       req << WiFly.read();
     }
 
-    //WiFly.ScanForPattern(bufRequest,REQUEST_BUFFER_SIZE, "testID:",false, 1000);
     if((String(bufRequest).length()!=0)){
 
       memset(bufTemp,0,TEMP_BUFFER_SIZE);
@@ -111,7 +95,7 @@ boolean wifi_read()
           i=i+2;
         }
       }
-      Serial << "Svar: " << bufTemp <<"slut" <<endl;
+      Serial << "S: " << bufTemp <<endl;
       return true;
     }
     return false;
@@ -124,26 +108,19 @@ boolean wifi_read()
 // Try to send data to server -------------------------------------
 boolean wifi_send() 
 {
-
-   //Serial << WiFly.getDeviceStatus() << endl;
-  
-  if(WiFly.isConnectionOpen())// && WiFly.isifUp()!=0)// && WiFly.isAssociated()) 
+  if(WiFly.isConnectionOpen())
   {
-
-     //WiFly.exitCommandMode();
-    //WiFly.write("exit/r");//.SendCommandSimple("exit",prompt);
-    //delay(100);
-//Serial << micros() << endl;
     memset(bufRequest,'0',REQUEST_BUFFER_SIZE);
     PString strSend(bufRequest, REQUEST_BUFFER_SIZE);
-    Serial << "Sending" << endl;    
+    //Serial << F("Sending") << Year << Second << endl;    
+    //WiFly << F("PowerStrip#id:") << ID << F(",power:") << activePower[0] << ";" << activePower[1] << ";" << activePower[2] << ";" << activePower[3] << F(",status:") << 
+      //Switch_State[0] << ";" << Switch_State[1] << ";" << Switch_State[2] << ";" << Switch_State[3] << F(",date:") << Year << ";" << Month << ";" << Day << F(",time:") << Hour << ";" << Minute << ";" << Second;
     strSend << ID << ":" << activePower[0] << ";" << activePower[1] << ";" << activePower[2] << ";" << activePower[3] << ":" << 
-      Switch_State[0] << ";" << Switch_State[1] << ";" << Switch_State[2] << ";" << Switch_State[3] << ":" << Year << ";" << Month << ";" << Day << ":" << Hour << ";" << Minute << ";" << Second << endl; // ID:10;11;12;13:1;0;0;0
+      Switch_State[0] << ";" << Switch_State[1] << ";" << Switch_State[2] << ";" << Switch_State[3] << ":" << Year << ";" << Month << ";" << Day << ":" << Hour << ";" << Minute << ";" << Second << endl;
     WiFly <<  (const char*) strSend;
     Serial <<  (const char*) strSend << endl;
     return true;
   }
-
-
   else return false;
 }
+

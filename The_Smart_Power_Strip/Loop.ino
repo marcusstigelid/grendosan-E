@@ -11,7 +11,7 @@ void loop()
     // Serial << "Start" << bufTemp << "STOP" << endl;
     if(String(bufTemp).charAt(0)=='S'){
       //Serial << "hej" << endl;
-      Serial << ID << ":OK" << endl;
+      //Serial << ID << ":OK" << endl;
       WiFly << ID << ":OK" << endl;
       parse(); //Parse input
       check_state(); //Check if states have changed
@@ -22,9 +22,8 @@ void loop()
 
 
 
-  if(millis()>=loopmillis+10000)//counter>=100000)// 
+  if(millis()>=loopmillis+10000)
   {
-    counter++;
     sample(); // Sample inputs
     loopmillis=millis();
     Year = year();
@@ -33,9 +32,7 @@ void loop()
     Hour = hour();
     Minute = minute();
     Second = second ();
-
- 
-    
+  
     //Send calculated values and state
     //Serial << bufferEmpty << endl;
     if(bufferEmpty) 
@@ -44,14 +41,16 @@ void loop()
       { //Try to send data and add to buffer when failure
         addToBuffer(); //Add measurements to buffer if they can't be sent
         if(!sendBuffer()){
-          Serial << "Reconnect 1" << endl;
-          if(!wifi_reconnect()){
-            WiFly.getDeviceStatus();
-            delay(100);
-            if(WiFly.isifUp()==0)
-              initialize();
-
+          //Serial << "Reconnect 1" << endl;
+          WiFly.getDeviceStatus();
+          delay(100);
+          if(WiFly.isifUp()==0){
+            if(wifi_init()){
+              wifi_reconnect();
+            }
           }
+          else
+            wifi_reconnect();
         }
       }
     }
@@ -60,18 +59,19 @@ void loop()
     { // If buffer is not empty then add latest data to buffer then try to send buffered values
       addToBuffer();
       if(!sendBuffer()){
-        Serial << "Reconnect 2" << endl;
-        if(!wifi_reconnect()){
+        //Serial << "Reconnect 2" << endl;
           WiFly.getDeviceStatus();
           delay(100);
-          if(WiFly.isifUp()==0 && counter==6)
-            initialize();
-
-        }
-
+          if(WiFly.isifUp()==0 && counter==0){
+            if(wifi_init()){
+              wifi_reconnect();
+            }
+          }
+          else if(counter==0)
+            wifi_reconnect();
       }
     }
-    //WiFly.exitCommandMode();
+    counter++;
     if(counter==6) counter=0;
   }
 }

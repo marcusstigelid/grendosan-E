@@ -215,11 +215,10 @@ char* GetBuffer_P(const int StringIndex, char* pBuffer, int bufSize) {
 // Used to set up communication ------------------------------------
 void setup() 
 {
-
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
 
-  Serial << "RAM > setup: " << freeMemory() << endl;
+  Serial << freeMemory() << endl;
 
   SPI_setup();
 
@@ -235,9 +234,8 @@ void setup()
   //Delay for booting WiFly module
   delay(1000);
 
-  Serial.println(F("Starting WiFly"));
   WiFly.begin();
-  Serial.println(F("WiFly:S"));
+  Serial.println(F("WiFly"));
 
 
 //  ssidP="Toshimoshi";//"Philips$iPhone$5";//"Toshimoshi";//;
