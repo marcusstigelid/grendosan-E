@@ -2,7 +2,7 @@
 
 void initialize()
 {
-
+ 
   if (!wifi_init()) // Joined Wifi?
   {
     if(REBOOT == true)

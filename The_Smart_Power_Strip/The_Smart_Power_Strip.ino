@@ -51,6 +51,11 @@ const int digitalLayout[] =
 
 boolean Switch_State[4]; // Array for the switching state of each socket
 
+
+
+
+
+
 int Switch_to_pin_array[] = 
 {
   5, 6, 7, 8 }; // Array for mapping states of the switches to the physical pins
@@ -78,7 +83,7 @@ boolean REBOOT = true;
 
 //The following is for storing in EEPROM
 // ID of the settings block
-#define CONFIG_VERSION "ls6"
+#define CONFIG_VERSION "ls7"
 
 // Tell it where to store your config data in EEPROM
 #define CONFIG_START 32
@@ -175,7 +180,7 @@ char bufTemp[TEMP_BUFFER_SIZE];
 //Write commands to progmem
 prog_char CMD_01[] PROGMEM = "set opt device_id Powerstrip";//"set wlan auth 0";
 prog_char CMD_02[] PROGMEM = "run web_app";
-prog_char CMD_03[] PROGMEM = "set sys printlvl 0";//0x10";
+prog_char CMD_03[] PROGMEM = "set sys printlvl 1";//0x10";
 prog_char CMD_04[] PROGMEM = "set wlan linkmon 10";
 prog_char CMD_05[] PROGMEM = "set wlan join 0";
 prog_char CMD_06[] PROGMEM = "set ip flags 0x6";
@@ -233,10 +238,8 @@ void setup()
 
   //Delay for booting WiFly module
   delay(1000);
-
   WiFly.begin();
   Serial.println(F("WiFly"));
-
 
 //  ssidP="Toshimoshi";//"Philips$iPhone$5";//"Toshimoshi";//;
 //  passphraseP="jbregell";//"grisnils";//"jbregell"

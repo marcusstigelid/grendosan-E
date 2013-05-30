@@ -12,7 +12,7 @@ void loop()
     if(String(bufTemp).charAt(0)=='S'){
       //Serial << "hej" << endl;
       //Serial << ID << ":OK" << endl;
-      WiFly << ID << ":OK" << endl;
+      WiFly << ID << ":OK\n";// << endl;
       parse(); //Parse input
       check_state(); //Check if states have changed
       while(WiFly.available())

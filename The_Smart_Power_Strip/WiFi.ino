@@ -22,7 +22,7 @@ boolean wifi_init()
     //Leave just in case
     //WiFly.leave();
 
-    Serial << F("Joining") << endl;
+    //Serial << F("Joining: ")<< ssid << endl;
     if( WiFly.join() ) 
     {
       Serial << F("Joined")<< endl; 

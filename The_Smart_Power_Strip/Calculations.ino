@@ -52,9 +52,9 @@ void sample()
 void powerCalc (int analogReadState[][60], int socket) {
 
   double RMS[2]={
-    0,0    };
+    0,0        };
   double squaredSum[2]={
-    0,0    };
+    0,0        };
   float phaseDiff;
   double powertemp, costemp;
   long offset=0;
@@ -83,16 +83,95 @@ void powerCalc (int analogReadState[][60], int socket) {
   }
   phaseDiff = phaseDifference(analogReadState);
   //Serial << phaseDiff << endl;
+  //Serial << "Phase_DFT: " << DFT_phase(analogReadState) << endl;
   costemp=cos(phaseDiff);
   powertemp=RMS[0]*RMS[1];//*costemp;
-  //  Serial << "Socket: " << socket << endl << "Current: " << RMS[1] << endl << "Voltage: " << RMS[0] << endl;
-  //  Serial << "Phase: " << cos(phaseDiff) << endl;
+  //Serial << "Socket: " << socket << " Current: " << RMS[1] << " Voltage: " << RMS[0] << " Power factor: " << cos(phaseDiff) << endl;
+  //Serial << "DFT_phase_diff: " << cos(DFT_phase(analogReadState)) << endl;
+  //Serial << "Phase Philgorithm: " << cos(phaseDiff) << endl;
   if(RMS[1]>=0.055)// && costemp>=0.7)
     activePower[socket]=powertemp;
   else
     activePower[socket]=0;
   //Serial << "Mem:" << freeMemory() << endl;
+
+
+
+
+
+
+
+
+
+
+
+  // The DFT phase differance algorithm---------------------------------------------------------------------------------------------------------
 }
+
+double DFT_phase(int analogReadState[][60]){
+  //Serial << "K: " << k << endl;
+  double N = 60; // Number of samples
+  double twopi = 6.2831853;
+  double phase_v, phase_c, C, S;
+  double R = 0;
+  double I = 0;
+  double DFT_sample_rate = 1500; // Sample rate
+  double r_n = 0;
+  double i_n = 0;
+  double k = 50*N/DFT_sample_rate; 
+  double t = 0;
+  double r[60];
+  double ans = 0;
+  
+  for (int n = 0; n < N; n++) {
+    t =  n/DFT_sample_rate;
+    r[n] = 450*cos(twopi*50*t);
+    //Serial << r[n] << " ";
+  }  
+
+  for(int n=0; n < N; n++){
+    //r_n = analogReadState[0][n];
+    i_n = analogReadState[0][n];
+    //Serial << endl << "Spänning: " << i_n;
+    C = cos(twopi*n*k/N);
+    S = sin(twopi*n*k/N);
+
+    R = R + r[n]*C + i_n*S;
+    I = I + i_n*C - r[n]*S;
+
+  }
+  
+  phase_v = atan2(I, R);
+  
+  R = 0;
+  I = 0;
+  
+  
+  for(int n=0; n < N; n++){
+    //r_n = analogReadState[0][n];
+    i_n = analogReadState[1][n];
+    C = cos(twopi*n*k/N); 
+    S = sin(twopi*n*k/N);
+
+    R = R + r[n]*C + i_n*S;
+    I = I + i_n*C - r[n]*S;
+
+  }
+  phase_c = atan2(I, R);
+  //Serial << "Phase Differance phase_v - phase_c: " << (phase_v - phase_c) << endl;
+  return (phase_v-phase_c);
+}
+//}
+
+// The DFT phase differance algorithm---------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
 
 // Phase Differnece -----------------------------------------------
 float phaseDifference(int analogReadState[][60]){//int analogReadState[][]){
@@ -149,6 +228,11 @@ int maximumValue(int start, int stop_, int array[])
 }
 
 //Function to find highest (maximum) value in array --------------- (Part of the Phase Differance calculations)
+
+
+
+
+
 
 
 
