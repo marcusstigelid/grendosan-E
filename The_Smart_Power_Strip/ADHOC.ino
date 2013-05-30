@@ -20,8 +20,8 @@ void listen (){
       is_done=true;
   }
   delay(1000);
-  ssidP=WiFly.getSSID(bufRequest,REQUEST_BUFFER_SIZE);
-  saveEEPROM();
+//  ssidP=WiFly.getSSID(bufRequest,REQUEST_BUFFER_SIZE);
+//  saveEEPROM();
 }
 
 
