@@ -123,6 +123,7 @@ boolean sendBuffer()
       //Year << ";" << Month << ";" << Day << ":" << Hour << ";" << Minute << ";" << Second << endl; // ID:10;11;12;13:1;0;0;0
 
       if(wifi_send()){ //Try to send loaded values
+        delay(10);
         //Update readIndex
         int step;
         if((readIndex[2]+datalength*2)>=256){

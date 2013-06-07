@@ -4,9 +4,12 @@
 void setup_adhoc(){
   char bufCMD[CMD_BUFFER_SIZE];
   //Load commands from PROGMEM and send to WiFly
-  for(int i=IDX_CMD_01 ; i<=IDX_CMD_02 ; i++){
-    WiFly.SendCommandSimple(GetBuffer_P(i,bufCMD,CMD_BUFFER_SIZE),prompt);
-  }
+//  for(int i=IDX_CMD_01 ; i<=IDX_CMD_02 ; i++){
+//    WiFly.SendCommandSimple(GetBuffer_P(i,bufCMD,CMD_BUFFER_SIZE),prompt);
+//  }
+  WiFly.SendCommandSimple(GetBuffer_P(IDX_CMD_01,bufCMD,CMD_BUFFER_SIZE),prompt);
+  WiFly.SendCommandSimple(GetBuffer_P(IDX_CMD_07,bufCMD,CMD_BUFFER_SIZE),prompt);
+  WiFly.SendCommandSimple(GetBuffer_P(IDX_CMD_02,bufCMD,CMD_BUFFER_SIZE),prompt);
   delay(1000);
   Serial << "Config" << endl;
 
